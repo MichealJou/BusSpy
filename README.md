@@ -42,6 +42,43 @@ Linux: /dev/ttyUSB0、/dev/ttyS0
 
 Linux 下如果无法打开串口，通常需要把当前用户加入 `dialout` 组，或调整串口设备权限。
 
+## 下载安装
+
+正式发布建议通过 GitHub Releases 提供安装包：
+
+- Windows：推荐 `.msi`，也可以提供 `.exe` 或 `.zip` 免安装包。
+- macOS：推荐 `.dmg`，也可以提供 `.app.zip`。
+- Linux：推荐 `.AppImage`，也可以提供 `.deb` / `.rpm`。
+
+如果不购买代码签名证书，也可以正常分发，只是首次运行时系统可能会提示未知开发者或未知发布者。
+
+Windows 首次运行：
+
+- 如果 SmartScreen 提示“Windows 已保护你的电脑”，点击“更多信息”，再点击“仍要运行”。
+- 如果公司电脑有安全策略限制，可能需要管理员允许。
+
+macOS 首次运行：
+
+- 如果提示无法验证开发者，可以右键 BusSpy，选择“打开”，再确认打开。
+- 也可以到“系统设置 -> 隐私与安全性”中允许 BusSpy 运行。
+
+Linux 首次运行：
+
+```bash
+chmod +x BusSpy.AppImage
+./BusSpy.AppImage
+```
+
+Linux 串口权限：
+
+```bash
+sudo usermod -aG dialout $USER
+```
+
+执行后需要重新登录系统。
+
+命令行安装示例见 [docs/usage.md](docs/usage.md)。
+
 ## 权限说明
 
 自动发现端口通常不需要额外权限，但打开串口通信可能受系统权限限制：

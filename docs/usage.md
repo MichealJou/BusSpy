@@ -1,6 +1,103 @@
 # BusSpy 使用说明
 
-## 1. 启动应用
+## 1. 下载与安装
+
+BusSpy 后续发布时建议放在 GitHub Releases，用户可以直接下载对应系统的安装包。
+
+推荐发布文件：
+
+- Windows：`BusSpy_x64.msi`、`BusSpy_x64-setup.exe` 或 `BusSpy_windows_x64.zip`
+- macOS：`BusSpy_aarch64.dmg`、`BusSpy_x64.dmg` 或 `BusSpy.app.zip`
+- Linux：`BusSpy.AppImage`、`BusSpy_amd64.deb`、`BusSpy_x86_64.rpm`
+
+### Windows 安装
+
+普通用户建议下载 `.msi` 或 `.exe` 后双击安装。
+
+如果没有购买代码签名证书，Windows 可能提示“未知发布者”或 SmartScreen 拦截。处理方式：
+
+1. 点击“更多信息”
+2. 点击“仍要运行”
+3. 按安装向导完成安装
+
+如果不想安装，也可以下载 `.zip` 免安装版，解压后运行 BusSpy。
+
+### macOS 安装
+
+普通用户建议下载 `.dmg`：
+
+1. 打开 `.dmg`
+2. 将 BusSpy 拖到 `Applications`
+3. 从应用程序中打开 BusSpy
+
+如果没有 Apple Developer 签名和公证，macOS 可能提示无法验证开发者。处理方式：
+
+- 右键 BusSpy，选择“打开”，再确认打开
+- 或进入“系统设置 -> 隐私与安全性”，允许 BusSpy 运行
+
+命令行安装示例：
+
+```bash
+curl -L -o BusSpy.dmg https://github.com/MichealJou/BusSpy/releases/latest/download/BusSpy_aarch64.dmg
+open BusSpy.dmg
+```
+
+如果下载的是 `.app.zip`：
+
+```bash
+curl -L -o BusSpy.app.zip https://github.com/MichealJou/BusSpy/releases/latest/download/BusSpy.app.zip
+unzip BusSpy.app.zip
+mv BusSpy.app /Applications/
+open /Applications/BusSpy.app
+```
+
+### Linux 安装
+
+推荐优先提供 `AppImage`，它不依赖具体发行版安装器。
+
+AppImage 命令行运行：
+
+```bash
+curl -L -o BusSpy.AppImage https://github.com/MichealJou/BusSpy/releases/latest/download/BusSpy.AppImage
+chmod +x BusSpy.AppImage
+./BusSpy.AppImage
+```
+
+Debian / Ubuntu 可以使用 `.deb`：
+
+```bash
+curl -L -o BusSpy.deb https://github.com/MichealJou/BusSpy/releases/latest/download/BusSpy_amd64.deb
+sudo apt install ./BusSpy.deb
+busspy
+```
+
+Fedora / RHEL 可以使用 `.rpm`：
+
+```bash
+curl -L -o BusSpy.rpm https://github.com/MichealJou/BusSpy/releases/latest/download/BusSpy_x86_64.rpm
+sudo dnf install ./BusSpy.rpm
+busspy
+```
+
+Linux 下如果无法打开串口，通常是当前用户没有串口设备权限：
+
+```bash
+sudo usermod -aG dialout $USER
+```
+
+执行后需要退出登录再进入系统，或者重启。
+
+### 无证书发布说明
+
+BusSpy 可以不购买代码签名证书直接分发。影响主要是首次运行体验：
+
+- Windows：可能提示未知发布者或 SmartScreen，需要用户手动选择仍要运行。
+- macOS：可能提示无法验证开发者，需要用户手动允许。
+- Linux：通常没有证书限制，但可能需要给 AppImage 添加执行权限。
+
+公开发布时建议把安装包放到 GitHub Releases，并在 Release 说明里写清楚首次运行提示和串口权限处理方式。
+
+## 2. 启动应用
 
 BusSpy 支持 macOS、Windows、Linux。
 
@@ -50,7 +147,7 @@ pnpm typecheck
 pnpm --filter @busspy/desktop build
 ```
 
-## 2. 连接设置
+## 3. 连接设置
 
 左侧 `连接设置` 用来选择当前通信方式。
 
@@ -105,7 +202,7 @@ pnpm --filter @busspy/desktop build
 - 目标地址
 - 目标端口
 
-## 3. 接收数据
+## 4. 接收数据
 
 接收区显示当前连接收到的数据。
 
@@ -123,7 +220,7 @@ pnpm --filter @busspy/desktop build
 
 说明：`分包` 的目标是把连续字节按时间间隔归为一帧。当前界面已有控制项，后续可继续增强为完整接收帧历史列表。
 
-## 4. 发送数据
+## 5. 发送数据
 
 发送区用于通过当前连接发送文本、HEX 或文件内容。
 
@@ -175,7 +272,7 @@ HEX 模式下不会追加换行。
 - 输入标签名可匹配标签
 - 输入原始编码可匹配历史值
 
-## 5. 校验
+## 6. 校验
 
 发送区支持 HEX 发送时自动追加校验。
 
@@ -201,7 +298,7 @@ HEX 模式下不会追加换行。
 
 表示从第 1 字节到最后 1 字节都参与校验。
 
-## 6. 协议解析
+## 7. 协议解析
 
 下方 `协议解析` 页签用于查看帧结构。
 
@@ -224,7 +321,7 @@ HEX 模式下不会追加换行。
 - 最后 2 字节：校验
 - 中间其他：数据
 
-## 7. 顶部工具栏
+## 8. 顶部工具栏
 
 顶部工具栏保留全局操作：
 
@@ -237,7 +334,7 @@ HEX 模式下不会追加换行。
 
 没有日志时，保存、导出、复制会禁用。
 
-## 8. 常见问题
+## 9. 常见问题
 
 ### 为什么发送后没有接收？
 
@@ -265,7 +362,7 @@ HEX 模式下不会追加换行。
 
 当前不是直接发送。它会先把文件内容读入发送输入框，再由用户点击 `发送`。
 
-## 9. 已知后续任务
+## 10. 已知后续任务
 
 - 接收数据实时写文件
 - 发送文件分包发送、进度、取消
@@ -274,7 +371,7 @@ HEX 模式下不会追加换行。
 - 字段范围标签持久化
 - 后端错误码国际化
 
-## 10. 跨平台打包
+## 11. 跨平台打包
 
 Tauri 应用需要在对应系统上构建对应安装包。
 
@@ -289,3 +386,5 @@ pnpm tauri:build
 - 在 Linux 上构建 Linux 安装包
 
 跨平台发布时，需要分别准备三个平台的构建环境。
+
+后续建议使用 GitHub Actions 分别在 Windows、macOS、Linux runner 上构建，并自动上传到 GitHub Releases。
