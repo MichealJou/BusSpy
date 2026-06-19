@@ -1,4 +1,16 @@
-# BusSpy
+<p align="center">
+  <img src="docs/assets/app-icon.png" width="96" height="96" alt="BusSpy icon" />
+</p>
+
+<h1 align="center">BusSpy</h1>
+
+<p align="center">
+  串口 / TCP / UDP 调试助手，支持 HEX 收发、协议帧查看、发送历史和常用指令标签。
+</p>
+
+<p align="center">
+  <img src="docs/assets/app-preview.png" alt="BusSpy 主界面预览" />
+</p>
 
 BusSpy 是一个基于 Tauri + React 的串口/网络调试助手，面向串口设备、TCP/UDP 调试、HEX 收发、协议帧观察和常用发送内容管理。
 
