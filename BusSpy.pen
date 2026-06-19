@@ -1,0 +1,4541 @@
+{
+  "version": "2.13",
+  "children": [
+    {
+      "type": "frame",
+      "id": "Y3fypr",
+      "x": 0,
+      "y": 0,
+      "name": "Welcome to Pencil",
+      "clip": true,
+      "width": 1000,
+      "height": 1458,
+      "layout": "none",
+      "children": [
+        {
+          "type": "text",
+          "id": "p5iwM",
+          "x": 38,
+          "y": 297,
+          "name": "Start here",
+          "fill": "#ff8303ff",
+          "textGrowth": "fixed-width-height",
+          "width": 923,
+          "height": 139,
+          "content": "Ask agent to design",
+          "lineHeight": 1.399999976158142,
+          "textAlign": "center",
+          "fontFamily": "Noto Sans",
+          "fontSize": 100,
+          "fontWeight": "500",
+          "letterSpacing": -4
+        }
+      ]
+    },
+    {
+      "type": "path",
+      "id": "pSGLk",
+      "x": 317,
+      "y": 689,
+      "geometry": "M7 0l0 14m7-7l-7 7-7-7",
+      "width": 366,
+      "height": 366,
+      "stroke": "#ff8302ff",
+      "strokeWidth": 50,
+      "strokeLinejoin": "round",
+      "strokeLinecap": "round"
+    },
+    {
+      "type": "frame",
+      "id": "jxq8H",
+      "x": 1060,
+      "y": 0,
+      "name": "串口助手",
+      "width": 1280,
+      "height": 820,
+      "fill": {
+        "type": "gradient",
+        "gradientType": "linear",
+        "enabled": true,
+        "rotation": 180,
+        "size": {
+          "height": 1
+        },
+        "colors": [
+          {
+            "color": "#F8F9FA",
+            "position": 0
+          },
+          {
+            "color": "#F0F1F3",
+            "position": 0.5
+          },
+          {
+            "color": "#E8E9EB",
+            "position": 1
+          }
+        ]
+      },
+      "cornerRadius": 20,
+      "effect": [
+        {
+          "type": "shadow",
+          "shadowType": "outer",
+          "color": "#00000008",
+          "blur": 1
+        },
+        {
+          "type": "shadow",
+          "shadowType": "outer",
+          "color": "#00000012",
+          "offset": {
+            "x": 0,
+            "y": 12
+          },
+          "blur": 40
+        },
+        {
+          "type": "shadow",
+          "shadowType": "outer",
+          "color": "#00000008",
+          "offset": {
+            "x": 0,
+            "y": 80
+          },
+          "blur": 160
+        },
+        {
+          "type": "shadow",
+          "shadowType": "outer",
+          "color": "#00000004",
+          "blur": 1,
+          "spread": 1
+        }
+      ],
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "d0zZB",
+          "name": "标题栏",
+          "width": "fill_container",
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 180,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#FFFFFFF8",
+                "position": 0
+              },
+              {
+                "color": "#FFFFFFF0",
+                "position": 1
+              }
+            ]
+          },
+          "stroke": "#E5E5E7",
+          "strokeWidth": 0.5,
+          "strokeAlignment": "outer",
+          "effect": [
+            {
+              "type": "background_blur",
+              "radius": 30
+            },
+            {
+              "type": "shadow",
+              "shadowType": "outer",
+              "color": "#FFFFFF60",
+              "offset": {
+                "x": 0,
+                "y": -1
+              },
+              "blur": 2
+            }
+          ],
+          "gap": 12,
+          "padding": [
+            16,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "oDvL9",
+              "name": "标题区域",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 10,
+                  "id": "RXnS4",
+                  "name": "应用图标",
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "rotation": 135,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#007AFF",
+                        "position": 0
+                      },
+                      {
+                        "color": "#5AC8FA",
+                        "position": 0.5
+                      },
+                      {
+                        "color": "#5856D6",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 32,
+                  "height": 32,
+                  "effect": [
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#007AFF60",
+                      "offset": {
+                        "x": 0,
+                        "y": 4
+                      },
+                      "blur": 16
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#FFFFFF40",
+                      "offset": {
+                        "x": 0,
+                        "y": -2
+                      },
+                      "blur": 4
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "UYzM9",
+                  "name": "应用名称",
+                  "fill": "#1D1D1F",
+                  "content": "串口助手",
+                  "fontFamily": "Inter",
+                  "fontSize": 17,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gvLTK",
+              "name": "窗口控制",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "RC9D2",
+                  "name": "最小化按钮",
+                  "width": 13,
+                  "height": 13,
+                  "fill": "#FF5F57",
+                  "cornerRadius": 50,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#FF5F5750",
+                    "offset": {
+                      "x": 0,
+                      "y": 2
+                    },
+                    "blur": 4
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "fVtdQ",
+                  "name": "最大化按钮",
+                  "width": 13,
+                  "height": 13,
+                  "fill": "#FEBC2E",
+                  "cornerRadius": 50,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#FEBC2E50",
+                    "offset": {
+                      "x": 0,
+                      "y": 2
+                    },
+                    "blur": 4
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "x71Nj",
+                  "name": "关闭按钮",
+                  "width": 13,
+                  "height": 13,
+                  "fill": "#28C840",
+                  "cornerRadius": 50,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#28C84050",
+                    "offset": {
+                      "x": 0,
+                      "y": 2
+                    },
+                    "blur": 4
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Zz5zi",
+          "name": "工具栏",
+          "width": "fill_container",
+          "height": 52,
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 180,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#FFFFFFF5",
+                "position": 0
+              },
+              {
+                "color": "#FFFFFFF0",
+                "position": 1
+              }
+            ]
+          },
+          "stroke": "#E5E5E7",
+          "strokeWidth": 0.5,
+          "strokeAlignment": "outer",
+          "effect": [
+            {
+              "type": "background_blur",
+              "radius": 30
+            },
+            {
+              "type": "shadow",
+              "shadowType": "outer",
+              "color": "#FFFFFF50",
+              "offset": {
+                "x": 0,
+                "y": -1
+              },
+              "blur": 2
+            }
+          ],
+          "gap": 8,
+          "padding": [
+            10,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "rBCJ4",
+              "name": "打开串口工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "z6ncwb",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "🔌",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "vaLzW",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "打开串口",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "p0dnCy",
+              "name": "关闭串口工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "E5PIf",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "🔌",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Duq6J",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "关闭串口",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "uC521",
+              "name": "清空接收工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "AUG7U",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "🗑",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "C45mb",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "清空接收",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "t8nIlB",
+              "name": "清空发送工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "LyDAx",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "🗑",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "oharf",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "清空发送",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Bdhy5",
+              "name": "暂停显示工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Hd1rH",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "⏸",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "yp0PQ",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "暂停显示",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Pmdbs",
+              "name": "保存数据工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sb3gU",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "💾",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "FKZsU",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "保存数据",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iDLFt",
+              "name": "打开文件工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "S2Gg0",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "📁",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "l78DT",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "打开文件",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "rectangle",
+              "id": "FqR36",
+              "name": "工具栏分隔线",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 90,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#E8E9ED",
+                    "position": 0
+                  },
+                  {
+                    "color": "#D8D9DD",
+                    "position": 0.5
+                  },
+                  {
+                    "color": "#E8E9ED",
+                    "position": 1
+                  }
+                ]
+              },
+              "width": 1,
+              "height": 24
+            },
+            {
+              "type": "frame",
+              "id": "M00h1",
+              "name": "文件发送工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "vKPVb",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "📤",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "dUqlu",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "文件发送",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "C8bqP",
+              "name": "自动应答工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jgcTP",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "💬",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "CKALT",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "自动应答",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UscnX",
+              "name": "脚本工具按钮",
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FAFBFC",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 8,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 0.5,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000006",
+                  "offset": {
+                    "x": 0,
+                    "y": 1
+                  },
+                  "blur": 3
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF80",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 2
+                }
+              ],
+              "gap": 6,
+              "padding": [
+                8,
+                14
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "B9Efm",
+                  "name": "图标",
+                  "fill": "#1D1D1F",
+                  "content": "📜",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "h2nDsN",
+                  "name": "按钮名",
+                  "fill": "#1D1D1F",
+                  "content": "脚本",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "fWZQB",
+          "name": "主内容区域",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "type": "frame",
+              "id": "sncLR",
+              "name": "配置面板",
+              "width": 320,
+              "fill": {
+                "type": "gradient",
+                "gradientType": "linear",
+                "enabled": true,
+                "rotation": 180,
+                "size": {
+                  "height": 1
+                },
+                "colors": [
+                  {
+                    "color": "#FFFFFF",
+                    "position": 0
+                  },
+                  {
+                    "color": "#FCFDFE",
+                    "position": 1
+                  }
+                ]
+              },
+              "cornerRadius": 16,
+              "stroke": "#E8E9ED",
+              "strokeWidth": 1,
+              "effect": [
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000008",
+                  "offset": {
+                    "x": 0,
+                    "y": 4
+                  },
+                  "blur": 16
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#00000004",
+                  "blur": 1
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#FFFFFF90",
+                  "offset": {
+                    "x": 0,
+                    "y": -1
+                  },
+                  "blur": 3
+                }
+              ],
+              "layout": "vertical",
+              "gap": 20,
+              "padding": 28,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H1B4B9",
+                  "name": "配置标题",
+                  "fill": "#1D1D1F",
+                  "content": "串口配置",
+                  "fontFamily": "Inter",
+                  "fontSize": 17,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.4
+                },
+                {
+                  "type": "frame",
+                  "id": "z9RRd9",
+                  "name": "串口选择框",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dvGFv",
+                      "name": "串口标签",
+                      "fill": "#8E8E93",
+                      "content": "串口",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.2
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iCWxD",
+                      "name": "串口下拉框",
+                      "width": "fill_container",
+                      "fill": "#F5F6F8",
+                      "cornerRadius": 10,
+                      "stroke": "#E0E1E6",
+                      "strokeWidth": 1,
+                      "effect": [
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#00000008",
+                          "offset": {
+                            "x": 0,
+                            "y": 1
+                          },
+                          "blur": 3
+                        },
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#FFFFFF60",
+                          "offset": {
+                            "x": 0,
+                            "y": -1
+                          },
+                          "blur": 2
+                        }
+                      ],
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "rO5cp",
+                          "name": "选中串口",
+                          "fill": "#1D1D1F",
+                          "textGrowth": "fixed-width",
+                          "width": 220,
+                          "content": "COM3 - USB-SERIAL CH340",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "PAy2H",
+                          "name": "下拉箭头",
+                          "fill": "#8E8E93",
+                          "content": "▼",
+                          "fontFamily": "Inter",
+                          "fontSize": 9,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "W9Ebgr",
+                  "name": "波特率框",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Ci8hY",
+                      "name": "波特率标签",
+                      "fill": "#8E8E93",
+                      "content": "波特率",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.2
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NLFMO",
+                      "name": "波特率下拉框",
+                      "width": "fill_container",
+                      "fill": "#F5F6F8",
+                      "cornerRadius": 10,
+                      "stroke": "#E0E1E6",
+                      "strokeWidth": 1,
+                      "effect": [
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#00000008",
+                          "offset": {
+                            "x": 0,
+                            "y": 1
+                          },
+                          "blur": 3
+                        },
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#FFFFFF60",
+                          "offset": {
+                            "x": 0,
+                            "y": -1
+                          },
+                          "blur": 2
+                        }
+                      ],
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "B2LdbD",
+                          "name": "选中波特率",
+                          "fill": "#1D1D1F",
+                          "textGrowth": "fixed-width",
+                          "width": 100,
+                          "content": "115200",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Zwnu8",
+                          "name": "下拉箭头",
+                          "fill": "#8E8E93",
+                          "content": "▼",
+                          "fontFamily": "Inter",
+                          "fontSize": 9,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "sA2at",
+                  "name": "数据位框",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xPfhC",
+                      "name": "数据位标签",
+                      "fill": "#8E8E93",
+                      "content": "数据位",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "letterSpacing": 0.2
+                    },
+                    {
+                      "type": "frame",
+                      "id": "B0EhZ",
+                      "name": "数据位下拉框",
+                      "width": "fill_container",
+                      "fill": "#F5F6F8",
+                      "cornerRadius": 10,
+                      "stroke": "#E0E1E6",
+                      "strokeWidth": 1,
+                      "effect": [
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#00000008",
+                          "offset": {
+                            "x": 0,
+                            "y": 1
+                          },
+                          "blur": 3
+                        },
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#FFFFFF60",
+                          "offset": {
+                            "x": 0,
+                            "y": -1
+                          },
+                          "blur": 2
+                        }
+                      ],
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "k1YeFO",
+                          "name": "选中数据位",
+                          "fill": "#1D1D1F",
+                          "content": "8",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "O6kbb",
+                          "name": "下拉箭头",
+                          "fill": "#8E8E93",
+                          "content": "▼",
+                          "fontFamily": "Inter",
+                          "fontSize": 9,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Oalqy",
+                  "name": "停止位校验位行",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ocSUf",
+                      "name": "停止位框",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "n8Cx4b",
+                          "name": "停止位标签",
+                          "fill": "#8E8E93",
+                          "content": "停止位",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.2
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jFQ6f",
+                          "name": "停止位下拉框",
+                          "width": "fill_container",
+                          "fill": "#F5F6F8",
+                          "cornerRadius": 10,
+                          "stroke": "#E0E1E6",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000008",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF60",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "B5ttLj",
+                              "name": "选中停止位",
+                              "fill": "#1D1D1F",
+                              "content": "1",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "GffjF",
+                              "name": "下拉箭头",
+                              "fill": "#8E8E93",
+                              "content": "▼",
+                              "fontFamily": "Inter",
+                              "fontSize": 9,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EqRlW",
+                      "name": "校验位框",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tIxSU",
+                          "name": "校验位标签",
+                          "fill": "#8E8E93",
+                          "content": "校验位",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.2
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Fkh5z",
+                          "name": "校验位下拉框",
+                          "width": "fill_container",
+                          "fill": "#F5F6F8",
+                          "cornerRadius": 10,
+                          "stroke": "#E0E1E6",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000008",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF60",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "ajBcN",
+                              "name": "选中校验位",
+                              "fill": "#1D1D1F",
+                              "content": "无",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "FulQe",
+                              "name": "下拉箭头",
+                              "fill": "#8E8E93",
+                              "content": "▼",
+                              "fontFamily": "Inter",
+                              "fontSize": 9,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "xwpjl",
+                  "name": "分隔线",
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "rotation": 90,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#E8E9ED",
+                        "position": 0
+                      },
+                      {
+                        "color": "#D8D9DD",
+                        "position": 0.5
+                      },
+                      {
+                        "color": "#E8E9ED",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "VZgGa",
+                  "name": "连接按钮",
+                  "width": "fill_container",
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "rotation": 180,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#007AFF",
+                        "position": 0
+                      },
+                      {
+                        "color": "#0056CC",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "cornerRadius": 12,
+                  "effect": [
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#007AFF40",
+                      "offset": {
+                        "x": 0,
+                        "y": 4
+                      },
+                      "blur": 16
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#007AFF20",
+                      "offset": {
+                        "x": 0,
+                        "y": 8
+                      },
+                      "blur": 32
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#FFFFFF30",
+                      "offset": {
+                        "x": 0,
+                        "y": -2
+                      },
+                      "blur": 4
+                    }
+                  ],
+                  "gap": 8,
+                  "padding": [
+                    14,
+                    28
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "vSyLR",
+                      "name": "按钮文字",
+                      "fill": "#FFFFFF",
+                      "content": "打开串口",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "700",
+                      "letterSpacing": 0.5
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Rm5tq",
+                  "name": "状态框",
+                  "width": "fill_container",
+                  "fill": "#F5F6F8",
+                  "cornerRadius": 12,
+                  "stroke": "#E0E1E6",
+                  "strokeWidth": 1,
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000006",
+                    "offset": {
+                      "x": 0,
+                      "y": 1
+                    },
+                    "blur": 3
+                  },
+                  "gap": 8,
+                  "padding": [
+                    12,
+                    18
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "Q3M7Co",
+                      "name": "状态点",
+                      "fill": "#FF3B30",
+                      "width": 10,
+                      "height": 10,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#FF3B3060",
+                        "offset": {
+                          "x": 0,
+                          "y": 2
+                        },
+                        "blur": 6
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "hoOOA",
+                      "name": "状态文字",
+                      "fill": "#8E8E93",
+                      "content": "未连接",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "vhCsE",
+              "name": "数据面板",
+              "clip": true,
+              "width": "fill_container",
+              "height": 600,
+              "layout": "vertical",
+              "gap": 20,
+              "padding": 24,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "S2mfO",
+                  "name": "接收区域标题栏",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "U5JJB",
+                      "name": "接收标题",
+                      "fill": "#1D1D1F",
+                      "content": "数据接收",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "700",
+                      "letterSpacing": -0.3
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f8FPT",
+                      "name": "接收控制按钮",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "hdon6",
+                          "name": "HEX模式按钮",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 180,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#FFFFFF",
+                                "position": 0
+                              },
+                              {
+                                "color": "#FAFBFC",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "cornerRadius": 8,
+                          "stroke": "#E8E9ED",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000006",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF70",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "IViCx",
+                              "name": "勾选框",
+                              "fill": "#FFFFFF",
+                              "width": 14,
+                              "height": 14,
+                              "stroke": "#C7C7CC",
+                              "strokeWidth": 1.5
+                            },
+                            {
+                              "type": "text",
+                              "id": "pp2dn",
+                              "name": "HEX标签",
+                              "fill": "#1D1D1F",
+                              "content": "HEX显示",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WCZhx",
+                          "name": "清空接收按钮",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 180,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#FFFFFF",
+                                "position": 0
+                              },
+                              {
+                                "color": "#FAFBFC",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "cornerRadius": 8,
+                          "stroke": "#E8E9ED",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000006",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF70",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DvPx1",
+                              "name": "清空标签",
+                              "fill": "#1D1D1F",
+                              "content": "清空",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "C4f6w",
+                          "name": "停止显示按钮",
+                          "fill": "#FF3B3010",
+                          "cornerRadius": 8,
+                          "stroke": "#FF3B30",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000006",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF70",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "b3DO3",
+                              "name": "停止标签",
+                              "fill": "#FF3B30",
+                              "content": "停止",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "w2UES",
+                          "name": "保存接收按钮",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 180,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#FFFFFF",
+                                "position": 0
+                              },
+                              {
+                                "color": "#FAFBFC",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "cornerRadius": 8,
+                          "stroke": "#E8E9ED",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000006",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF70",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "JdgzW",
+                              "name": "保存标签",
+                              "fill": "#1D1D1F",
+                              "content": "保存",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "aTEFe",
+                          "name": "时间戳按钮",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 180,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#FFFFFF",
+                                "position": 0
+                              },
+                              {
+                                "color": "#FAFBFC",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "cornerRadius": 8,
+                          "stroke": "#E8E9ED",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000006",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF70",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "YiYFX",
+                              "name": "时间戳勾选框",
+                              "fill": "#FFFFFF",
+                              "width": 14,
+                              "height": 14,
+                              "stroke": "#C7C7CC",
+                              "strokeWidth": 1.5
+                            },
+                            {
+                              "type": "text",
+                              "id": "mLNB6",
+                              "name": "时间戳标签",
+                              "fill": "#1D1D1F",
+                              "content": "时间戳",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WFnnt",
+                      "name": "数据格式选项",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "V3oXWn",
+                          "name": "UTF8按钮",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 180,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#FFFFFF",
+                                "position": 0
+                              },
+                              {
+                                "color": "#FAFBFC",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "cornerRadius": 8,
+                          "stroke": "#E8E9ED",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000006",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF70",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "UGIkZ",
+                              "name": "UTF8勾选框",
+                              "fill": "#FFFFFF",
+                              "width": 14,
+                              "height": 14,
+                              "stroke": "#C7C7CC",
+                              "strokeWidth": 1.5
+                            },
+                            {
+                              "type": "text",
+                              "id": "T0mYzJ",
+                              "name": "UTF8标签",
+                              "fill": "#1D1D1F",
+                              "content": "UTF-8",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "d1IqO",
+                          "name": "ASCII按钮",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 180,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#007AFF",
+                                "position": 0
+                              },
+                              {
+                                "color": "#0066E6",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "cornerRadius": 8,
+                          "stroke": "#0066D6",
+                          "strokeWidth": 1,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#007AFF40",
+                            "offset": {
+                              "x": 0,
+                              "y": 2
+                            },
+                            "blur": 8
+                          },
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 3,
+                              "id": "OUirw",
+                              "name": "ASCII勾选框",
+                              "fill": "#FFFFFF",
+                              "width": 14,
+                              "height": 14
+                            },
+                            {
+                              "type": "text",
+                              "id": "dBhrY",
+                              "name": "ASCII标签",
+                              "fill": "#FFFFFF",
+                              "content": "ASCII",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xF4bx",
+                      "name": "日志选项",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "gPQOb",
+                          "name": "日志按钮",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 180,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#FFFFFF",
+                                "position": 0
+                              },
+                              {
+                                "color": "#FAFBFC",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "cornerRadius": 8,
+                          "stroke": "#E8E9ED",
+                          "strokeWidth": 1,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#00000006",
+                              "offset": {
+                                "x": 0,
+                                "y": 1
+                              },
+                              "blur": 3
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF70",
+                              "offset": {
+                                "x": 0,
+                                "y": -1
+                              },
+                              "blur": 2
+                            }
+                          ],
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "hmO8f",
+                              "name": "日志勾选框",
+                              "fill": "#FFFFFF",
+                              "width": 14,
+                              "height": 14,
+                              "stroke": "#C7C7CC",
+                              "strokeWidth": 1.5
+                            },
+                            {
+                              "type": "text",
+                              "id": "M78d8Q",
+                              "name": "日志标签",
+                              "fill": "#1D1D1F",
+                              "content": "记录日志",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "yfTOs",
+                  "name": "接收显示区",
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 260,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "rotation": 180,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#1C1C1E",
+                        "position": 0
+                      },
+                      {
+                        "color": "#18181A",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "cornerRadius": 14,
+                  "stroke": {
+                    "type": "gradient",
+                    "gradientType": "linear",
+                    "enabled": true,
+                    "rotation": 180,
+                    "size": {
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#3A3A3C",
+                        "position": 0
+                      },
+                      {
+                        "color": "#2C2C2E",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "strokeWidth": 1,
+                  "effect": [
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#00000030",
+                      "offset": {
+                        "x": 0,
+                        "y": 8
+                      },
+                      "blur": 24
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#00000040",
+                      "offset": {
+                        "x": 0,
+                        "y": 3
+                      },
+                      "blur": 6
+                    },
+                    {
+                      "type": "shadow",
+                      "shadowType": "outer",
+                      "color": "#00000015",
+                      "blur": 1
+                    }
+                  ],
+                  "layout": "vertical",
+                  "padding": 20,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "q2om3w",
+                      "name": "接收数据示例",
+                      "fill": "#B0B0B0",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "[RX] 2025-06-19 10:23:45.123 → Hello, World!\n[RX] 2025-06-19 10:23:46.456 → Ready\n[RX] 2025-06-19 10:23:47.789 → OK\n[RX] 2025-06-19 10:23:48.012 → Data received: 1234 bytes",
+                      "lineHeight": 1.7,
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal",
+                      "letterSpacing": 0.2
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "y8Eyf",
+                  "name": "发送面板",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "LhiRm",
+                      "name": "发送区域标题栏",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "zYjgP",
+                          "name": "发送标题",
+                          "fill": "#1D1D1F",
+                          "content": "数据发送",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "700",
+                          "letterSpacing": -0.3
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ginLE",
+                          "name": "发送控制按钮",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "Rd2vC",
+                              "name": "HEX发送按钮",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFFFFF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#FAFBFC",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 8,
+                              "stroke": "#E8E9ED",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#00000006",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 1
+                                  },
+                                  "blur": 3
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF70",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 4,
+                                  "id": "KZHaZ",
+                                  "name": "HEX勾选框",
+                                  "fill": "#FFFFFF",
+                                  "width": 14,
+                                  "height": 14,
+                                  "stroke": "#C7C7CC",
+                                  "strokeWidth": 1.5
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "QZl0d",
+                                  "name": "HEX发送标签",
+                                  "fill": "#1D1D1F",
+                                  "content": "HEX发送",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "pGkg6",
+                              "name": "换行按钮",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFFFFF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#FAFBFC",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 8,
+                              "stroke": "#E8E9ED",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#00000006",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 1
+                                  },
+                                  "blur": 3
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF70",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "rectangle",
+                                  "cornerRadius": 3,
+                                  "id": "cyLkB",
+                                  "name": "换行勾选框",
+                                  "fill": {
+                                    "type": "gradient",
+                                    "gradientType": "linear",
+                                    "enabled": true,
+                                    "rotation": 180,
+                                    "size": {
+                                      "height": 1
+                                    },
+                                    "colors": [
+                                      {
+                                        "color": "#007AFF",
+                                        "position": 0
+                                      },
+                                      {
+                                        "color": "#0066E6",
+                                        "position": 1
+                                      }
+                                    ]
+                                  },
+                                  "width": 14,
+                                  "height": 14,
+                                  "stroke": "#0066D6",
+                                  "strokeWidth": 1.5,
+                                  "effect": {
+                                    "type": "shadow",
+                                    "shadowType": "outer",
+                                    "color": "#007AFF30",
+                                    "offset": {
+                                      "x": 0,
+                                      "y": 1
+                                    },
+                                    "blur": 4
+                                  }
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "UOLbH",
+                                  "name": "换行标签",
+                                  "fill": "#1D1D1F",
+                                  "content": "发送新行",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "wXWob",
+                              "name": "清空发送按钮",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFFFFF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#FAFBFC",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 8,
+                              "stroke": "#E8E9ED",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#00000006",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 1
+                                  },
+                                  "blur": 3
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF70",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Z4VOO",
+                                  "name": "清空发送标签",
+                                  "fill": "#1D1D1F",
+                                  "content": "清空",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Q9J2L",
+                              "name": "文件发送按钮",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFFFFF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#FAFBFC",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 8,
+                              "stroke": "#E8E9ED",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#00000006",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 1
+                                  },
+                                  "blur": 3
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF70",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "gap": 6,
+                              "padding": [
+                                8,
+                                14
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "s25FeJ",
+                                  "name": "文件发送标签",
+                                  "fill": "#1D1D1F",
+                                  "content": "文件发送",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f6UgyA",
+                      "name": "发送输入区",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "f7Y1x",
+                          "name": "发送输入框",
+                          "width": "fill_container",
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 14,
+                          "stroke": "#007AFF",
+                          "strokeWidth": 2,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#007AFF30",
+                              "offset": {
+                                "x": 0,
+                                "y": 4
+                              },
+                              "blur": 16
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#007AFF15",
+                              "offset": {
+                                "x": 0,
+                                "y": 2
+                              },
+                              "blur": 4
+                            }
+                          ],
+                          "layout": "vertical",
+                          "padding": [
+                            16,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "stjLK",
+                              "name": "发送占位符",
+                              "fill": "#8E8E93",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "输入要发送的数据...",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "J2fw1v",
+                          "name": "发送按钮",
+                          "width": 110,
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 180,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#007AFF",
+                                "position": 0
+                              },
+                              {
+                                "color": "#0056CC",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "cornerRadius": 14,
+                          "effect": [
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#007AFF50",
+                              "offset": {
+                                "x": 0,
+                                "y": 4
+                              },
+                              "blur": 16
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#007AFF30",
+                              "offset": {
+                                "x": 0,
+                                "y": 8
+                              },
+                              "blur": 32
+                            },
+                            {
+                              "type": "shadow",
+                              "shadowType": "outer",
+                              "color": "#FFFFFF30",
+                              "offset": {
+                                "x": 0,
+                                "y": -2
+                              },
+                              "blur": 4
+                            }
+                          ],
+                          "gap": 8,
+                          "padding": [
+                            14,
+                            28
+                          ],
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "rPLnK",
+                              "name": "发送按钮文字",
+                              "fill": "#FFFFFF",
+                              "content": "发送",
+                              "fontFamily": "Inter",
+                              "fontSize": 15,
+                              "fontWeight": "700",
+                              "letterSpacing": 0.5
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "kSiR0",
+                      "name": "定时发送框",
+                      "width": "fill_container",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": 180,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#F5F6F8",
+                            "position": 0
+                          },
+                          {
+                            "color": "#EEF0F2",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "cornerRadius": 14,
+                      "stroke": "#E0E1E6",
+                      "strokeWidth": 1,
+                      "effect": [
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#FFFFFF60",
+                          "offset": {
+                            "x": 0,
+                            "y": -1
+                          },
+                          "blur": 3
+                        },
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#00000004",
+                          "offset": {
+                            "x": 0,
+                            "y": 2
+                          },
+                          "blur": 6
+                        }
+                      ],
+                      "gap": 14,
+                      "padding": [
+                        14,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dtv64",
+                          "name": "定时勾选框",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "O5smw",
+                              "name": "定时勾选",
+                              "fill": "#FFFFFF",
+                              "width": 18,
+                              "height": 18,
+                              "stroke": "#C7C7CC",
+                              "strokeWidth": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "Tafzy",
+                              "name": "定时发送标签",
+                              "fill": "#1D1D1F",
+                              "content": "定时发送",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "sqN32",
+                          "name": "定时间隔输入",
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 10,
+                          "stroke": "#E8E9ED",
+                          "strokeWidth": 1,
+                          "gap": 8,
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DVbIa",
+                              "name": "间隔值",
+                              "fill": "#1D1D1F",
+                              "content": "1000",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "cxL0N",
+                              "name": "间隔单位",
+                              "fill": "#8E8E93",
+                              "content": "ms",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x7vsYW",
+                      "name": "统计栏",
+                      "width": "fill_container",
+                      "gap": 24,
+                      "padding": [
+                        8,
+                        0
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "CH3U8",
+                          "name": "接收统计",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "jllrr",
+                              "name": "RX标签",
+                              "fill": "#8E8E93",
+                              "content": "RX:",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.5
+                            },
+                            {
+                              "type": "text",
+                              "id": "G7sf6",
+                              "name": "RX值",
+                              "fill": "#1D1D1F",
+                              "content": "0",
+                              "fontFamily": "Inter",
+                              "fontSize": 15,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "IbxTK",
+                          "name": "发送统计",
+                          "gap": 6,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "wuxsi",
+                              "name": "TX标签",
+                              "fill": "#8E8E93",
+                              "content": "TX:",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "600",
+                              "letterSpacing": 0.5
+                            },
+                            {
+                              "type": "text",
+                              "id": "yOwg8",
+                              "name": "TX值",
+                              "fill": "#1D1D1F",
+                              "content": "0",
+                              "fontFamily": "Inter",
+                              "fontSize": 15,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fIVfI",
+                      "name": "快捷命令区",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Js708",
+                          "name": "快捷命令标题",
+                          "fill": "#8E8E93",
+                          "content": "快捷命令",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600",
+                          "letterSpacing": 0.3
+                        },
+                        {
+                          "type": "frame",
+                          "id": "l1ut5",
+                          "name": "快捷命令第一行",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "jMykV",
+                              "name": "快捷命令1_AT",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#007AFF15",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#007AFF08",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 20,
+                              "stroke": "#007AFF40",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#007AFF25",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 2
+                                  },
+                                  "blur": 8
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF40",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "padding": [
+                                10,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rR5co",
+                                  "name": "命令文字",
+                                  "fill": "#007AFF",
+                                  "content": "AT",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "700",
+                                  "letterSpacing": 0.5
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "LCjH3",
+                              "name": "快捷命令1_OK",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#007AFF15",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#007AFF08",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 20,
+                              "stroke": "#007AFF40",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#007AFF25",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 2
+                                  },
+                                  "blur": 8
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF40",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "padding": [
+                                10,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "ed0H9",
+                                  "name": "命令文字",
+                                  "fill": "#007AFF",
+                                  "content": "OK",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "700",
+                                  "letterSpacing": 0.5
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "LmyFy",
+                              "name": "快捷命令1_RESET",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#007AFF15",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#007AFF08",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 20,
+                              "stroke": "#007AFF40",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#007AFF25",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 2
+                                  },
+                                  "blur": 8
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF40",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "padding": [
+                                10,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "SUH7F",
+                                  "name": "命令文字",
+                                  "fill": "#007AFF",
+                                  "content": "RESET",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "700",
+                                  "letterSpacing": 0.5
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "WydUc",
+                          "name": "快捷命令第二行",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "kRfDi",
+                              "name": "快捷命令2_STATUS",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#007AFF15",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#007AFF08",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 20,
+                              "stroke": "#007AFF40",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#007AFF25",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 2
+                                  },
+                                  "blur": 8
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF40",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "padding": [
+                                10,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "G6Q8R",
+                                  "name": "命令文字",
+                                  "fill": "#007AFF",
+                                  "content": "STATUS",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "700",
+                                  "letterSpacing": 0.5
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "KrxSb",
+                              "name": "快捷命令2_HELP",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#007AFF15",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#007AFF08",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 20,
+                              "stroke": "#007AFF40",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#007AFF25",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 2
+                                  },
+                                  "blur": 8
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF40",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "padding": [
+                                10,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "uu4GN",
+                                  "name": "命令文字",
+                                  "fill": "#007AFF",
+                                  "content": "HELP",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "700",
+                                  "letterSpacing": 0.5
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MBj2r",
+                              "name": "快捷命令2_VERSION",
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 180,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#007AFF15",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#007AFF08",
+                                    "position": 1
+                                  }
+                                ]
+                              },
+                              "cornerRadius": 20,
+                              "stroke": "#007AFF40",
+                              "strokeWidth": 1,
+                              "effect": [
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#007AFF25",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": 2
+                                  },
+                                  "blur": 8
+                                },
+                                {
+                                  "type": "shadow",
+                                  "shadowType": "outer",
+                                  "color": "#FFFFFF40",
+                                  "offset": {
+                                    "x": 0,
+                                    "y": -1
+                                  },
+                                  "blur": 2
+                                }
+                              ],
+                              "padding": [
+                                10,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "wa1h2",
+                                  "name": "命令文字",
+                                  "fill": "#007AFF",
+                                  "content": "VERSION",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "700",
+                                  "letterSpacing": 0.5
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "oX38W",
+                      "name": "自动应答配置区",
+                      "width": "fill_container",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": 180,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#F5F6F8",
+                            "position": 0
+                          },
+                          {
+                            "color": "#EEF0F2",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "cornerRadius": 14,
+                      "stroke": "#E0E1E6",
+                      "strokeWidth": 1,
+                      "effect": [
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#FFFFFF60",
+                          "offset": {
+                            "x": 0,
+                            "y": -1
+                          },
+                          "blur": 3
+                        },
+                        {
+                          "type": "shadow",
+                          "shadowType": "outer",
+                          "color": "#00000004",
+                          "offset": {
+                            "x": 0,
+                            "y": 2
+                          },
+                          "blur": 6
+                        }
+                      ],
+                      "gap": 14,
+                      "padding": [
+                        14,
+                        18
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "vcqwF",
+                          "name": "自动应答勾选框",
+                          "gap": 8,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "rectangle",
+                              "cornerRadius": 4,
+                              "id": "EMjWC",
+                              "name": "自动应答勾选",
+                              "fill": "#FFFFFF",
+                              "width": 18,
+                              "height": 18,
+                              "stroke": "#C7C7CC",
+                              "strokeWidth": 1
+                            },
+                            {
+                              "type": "text",
+                              "id": "aAchB",
+                              "name": "自动应答标签",
+                              "fill": "#1D1D1F",
+                              "content": "自动应答",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "K0m3LH",
+                          "name": "应答输入框",
+                          "width": 200,
+                          "fill": "#FFFFFF",
+                          "cornerRadius": 10,
+                          "stroke": "#E8E9ED",
+                          "strokeWidth": 1,
+                          "gap": 8,
+                          "padding": [
+                            10,
+                            16
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "O0hL0F",
+                              "name": "应答内容占位",
+                              "fill": "#8E8E93",
+                              "content": "收到数据自动回复的内容",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "zjAkn",
+          "name": "状态栏",
+          "width": "fill_container",
+          "height": 32,
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 180,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#FFFFFFF8",
+                "position": 0
+              },
+              {
+                "color": "#FFFFFFF0",
+                "position": 1
+              }
+            ]
+          },
+          "stroke": "#E8E9ED",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "effect": [
+            {
+              "type": "background_blur",
+              "radius": 30
+            },
+            {
+              "type": "shadow",
+              "shadowType": "outer",
+              "color": "#FFFFFF50",
+              "offset": {
+                "x": 0,
+                "y": -1
+              },
+              "blur": 2
+            }
+          ],
+          "gap": 16,
+          "padding": [
+            0,
+            20
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "mTmsP",
+              "name": "状态栏左侧",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "k2fJ0",
+                  "name": "波特率显示",
+                  "gap": 4,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Clgun",
+                      "name": "波特率标签",
+                      "fill": "#86868B",
+                      "content": "波特率:",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "u7Fwa",
+                      "name": "波特率值",
+                      "fill": "#1D1D1F",
+                      "content": "115200",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "aI6Da",
+                  "name": "数据位显示",
+                  "gap": 4,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "i3xX6",
+                      "name": "数据位标签",
+                      "fill": "#1D1D1F",
+                      "content": "8-N-1",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "z5GXlX",
+              "name": "状态栏右侧",
+              "width": "fill_container",
+              "gap": 16,
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "CUDaF",
+                  "name": "串口状态",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "S0PDo6",
+                      "name": "状态点",
+                      "fill": "#FF5F57",
+                      "width": 6,
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "id": "B5CsPp",
+                      "name": "状态文字",
+                      "fill": "#86868B",
+                      "content": "未连接",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Nj26L",
+                  "name": "RX统计2",
+                  "gap": 4,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "We6iP",
+                      "name": "RX标签",
+                      "fill": "#86868B",
+                      "content": "RX:",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Z2P0Y",
+                      "name": "RX值",
+                      "fill": "#1D1D1F",
+                      "content": "0",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e7tSKo",
+                  "name": "TX统计2",
+                  "gap": 4,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "dAhnQ",
+                      "name": "TX标签",
+                      "fill": "#86868B",
+                      "content": "TX:",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "aDN1k",
+                      "name": "TX值",
+                      "fill": "#1D1D1F",
+                      "content": "0",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "600"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "themes": {
+    "Mode": [
+      "Light",
+      "Dark"
+    ]
+  },
+  "variables": {
+    "--sidebar": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#E7E8E5"
+        },
+        {
+          "value": "#18181b",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--sidebar-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#666666"
+        },
+        {
+          "value": "#fafafa",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--sidebar-primary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#18181b"
+        },
+        {
+          "value": "#18181b",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--sidebar-primary-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#fafafa"
+        },
+        {
+          "value": "#fafafa",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--sidebar-border": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#CBCCC9"
+        },
+        {
+          "value": "#ffffff1a",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--sidebar-accent": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#CBCCC9"
+        },
+        {
+          "value": "#2a2a30",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--sidebar-accent-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#18181b"
+        },
+        {
+          "value": "#fafafa",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--sidebar-ring": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#71717a"
+        },
+        {
+          "value": "#71717a",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--background": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F2F3F0"
+        },
+        {
+          "value": "#111111",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#111111"
+        },
+        {
+          "value": "#FFFFFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--card": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFF"
+        },
+        {
+          "value": "#1A1A1A",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--card-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#111111"
+        },
+        {
+          "value": "#FFFFFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--popover": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFF"
+        },
+        {
+          "value": "#1A1A1A",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--popover-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#111111"
+        },
+        {
+          "value": "#FFFFFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--primary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FF8400"
+        },
+        {
+          "value": "#FF8400",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--primary-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#111111"
+        },
+        {
+          "value": "#111111",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--secondary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#E7E8E5"
+        },
+        {
+          "value": "#2E2E2E",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--secondary-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#111111"
+        },
+        {
+          "value": "#FFFFFF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--muted": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F2F3F0"
+        },
+        {
+          "value": "#2E2E2E",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--muted-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#666666"
+        },
+        {
+          "value": "#B8B9B6",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--accent": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F2F3F0"
+        },
+        {
+          "value": "#111111",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--accent-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#111111"
+        },
+        {
+          "value": "#F2F3F0",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--destructive": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#D93C15"
+        },
+        {
+          "value": "#FF5C33",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--border": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#CBCCC9"
+        },
+        {
+          "value": "#2E2E2E",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--input": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#CBCCC9"
+        },
+        {
+          "value": "#2E2E2E",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--ring": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#666666"
+        },
+        {
+          "value": "#666666",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--white": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "--black": {
+      "type": "color",
+      "value": "#000000"
+    },
+    "--font-primary": {
+      "type": "string",
+      "value": "JetBrains Mono"
+    },
+    "--font-secondary": {
+      "type": "string",
+      "value": "Geist"
+    },
+    "--radius-none": {
+      "type": "number",
+      "value": 0
+    },
+    "--radius-pill": {
+      "type": "number",
+      "value": 999
+    },
+    "--color-success": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#DFE6E1"
+        },
+        {
+          "value": "#222924",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--color-success-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#004D1A"
+        },
+        {
+          "value": "#B6FFCE",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--color-warning": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#E9E3D8"
+        },
+        {
+          "value": "#291C0F",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--color-warning-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#804200"
+        },
+        {
+          "value": "#FF8400",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--color-error": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#E5DCDA"
+        },
+        {
+          "value": "#24100B",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--color-error-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#8C1C00"
+        },
+        {
+          "value": "#FF5C33",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--color-info": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#DFDFE6"
+        },
+        {
+          "value": "#222229",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--color-info-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#000066"
+        },
+        {
+          "value": "#B2B2FF",
+          "theme": {
+            "Mode": "Dark"
+          }
+        }
+      ]
+    },
+    "--radius-m": {
+      "type": "number",
+      "value": 16
+    }
+  }
+}

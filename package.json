@@ -1,0 +1,19 @@
+{
+  "name": "busspy",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "turbo dev",
+    "desktop:dev": "pnpm --filter @busspy/desktop dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "tauri": "pnpm --filter @busspy/desktop tauri",
+    "tauri:dev": "pnpm --filter @busspy/desktop tauri dev",
+    "tauri:build": "pnpm --filter @busspy/desktop tauri build"
+  },
+  "devDependencies": {
+    "turbo": "^2.6.0",
+    "typescript": "^5.8.3"
+  }
+}

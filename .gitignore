@@ -1,0 +1,8 @@
+node_modules
+dist
+.turbo
+target
+src-tauri/target
+*.log
+.DS_Store
+.idea/
