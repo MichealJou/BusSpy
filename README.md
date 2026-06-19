@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/app-preview.png" alt="BusSpy 主界面预览" />
+  <img src="docs/assets/app-preview-v2.png" alt="BusSpy 主界面预览" />
 </p>
 
 BusSpy 是一个基于 Tauri + React 的串口/网络调试助手，面向串口设备、TCP/UDP 调试、HEX 收发、协议帧观察和常用发送内容管理。
