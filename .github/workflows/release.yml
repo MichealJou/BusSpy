@@ -4,7 +4,15 @@ on:
   push:
     tags:
       - "v*"
+  release:
+    types:
+      - published
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag, for example v0.1.0"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -71,10 +79,10 @@ jobs:
           projectPath: apps/desktop
           tauriScript: pnpm tauri
           args: ${{ matrix.args }}
-          tagName: ${{ github.ref_name }}
-          releaseName: BusSpy ${{ github.ref_name }}
+          tagName: ${{ github.event.release.tag_name || inputs.version || github.ref_name }}
+          releaseName: BusSpy ${{ github.event.release.tag_name || inputs.version || github.ref_name }}
           releaseBody: |
-            BusSpy ${{ github.ref_name }}
+            BusSpy ${{ github.event.release.tag_name || inputs.version || github.ref_name }}
 
             下载对应系统的安装包：
 
@@ -83,6 +91,6 @@ jobs:
             - Linux：`.AppImage` / `.deb` / `.rpm`
 
             未签名版本首次运行可能需要手动允许，Linux 串口访问可能需要加入 `dialout` 用户组。
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           releaseAssetNamePattern: BusSpy-[version]-[platform]-[arch]-[bundle][setup][ext]
