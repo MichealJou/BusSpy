@@ -180,6 +180,40 @@ pnpm --filter @busspy/desktop build
 pnpm tauri:dev
 ```
 
+## 自动打包发布
+
+项目已经配置 GitHub Actions 自动打包。推送版本 tag 后，会自动构建并上传 Release 草稿：
+
+- Windows：`.exe` / `.msi`
+- macOS：`.dmg`
+- Linux：`.AppImage` / `.deb` / `.rpm`
+
+版本号来自：
+
+- `apps/desktop/package.json`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `apps/desktop/src-tauri/Cargo.toml`
+
+发布前需要保持三个文件里的版本号一致。
+
+发布 `v0.1.0` 示例：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+打包完成后，到 GitHub Releases 检查草稿，确认安装包无误后手动发布。
+
+安装包文件名会带版本号，例如：
+
+```text
+BusSpy-0.1.0-windows-x86_64-nsis-setup.exe
+BusSpy-0.1.0-windows-x86_64-msi.msi
+BusSpy-0.1.0-macos-aarch64-dmg.dmg
+BusSpy-0.1.0-linux-x86_64-deb.deb
+```
+
 ## 使用文档
 
 详细使用说明见：

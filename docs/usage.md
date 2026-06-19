@@ -387,4 +387,48 @@ pnpm tauri:build
 
 跨平台发布时，需要分别准备三个平台的构建环境。
 
-后续建议使用 GitHub Actions 分别在 Windows、macOS、Linux runner 上构建，并自动上传到 GitHub Releases。
+项目已经配置 GitHub Actions 自动发布流水线：
+
+```text
+.github/workflows/release.yml
+```
+
+触发方式：
+
+- 推送 `v*` tag，例如 `v0.1.0`
+- 或在 GitHub Actions 页面手动运行 `Release` workflow
+
+发布步骤：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+流水线会分别在这些环境构建：
+
+- `windows-latest`：生成 Windows 安装包
+- `macos-latest`：生成 Apple Silicon 和 Intel macOS 安装包
+- `ubuntu-22.04`：生成 Linux 安装包
+
+自动上传的文件名会包含版本号、平台和架构，例如：
+
+```text
+BusSpy-0.1.0-windows-x86_64-nsis-setup.exe
+BusSpy-0.1.0-windows-x86_64-msi.msi
+BusSpy-0.1.0-macos-aarch64-dmg.dmg
+BusSpy-0.1.0-macos-x86_64-dmg.dmg
+BusSpy-0.1.0-linux-x86_64-appimage.AppImage
+BusSpy-0.1.0-linux-x86_64-deb.deb
+BusSpy-0.1.0-linux-x86_64-rpm.rpm
+```
+
+Release 默认创建为草稿。构建完成后，需要进入 GitHub Releases 检查文件，再手动发布。
+
+发布前请确认三个版本号一致：
+
+- `apps/desktop/package.json`
+- `apps/desktop/src-tauri/tauri.conf.json`
+- `apps/desktop/src-tauri/Cargo.toml`
+
+如果版本号不一致，Release tag 和安装包版本可能让用户混淆。
