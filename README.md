@@ -61,6 +61,12 @@ macOS 首次运行：
 
 - 如果提示无法验证开发者，可以右键 BusSpy，选择“打开”，再确认打开。
 - 也可以到“系统设置 -> 隐私与安全性”中允许 BusSpy 运行。
+- 如果仍然无法打开，可以在终端执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/BusSpy.app
+xattr -cr /Applications/BusSpy.app
+```
 
 Linux 首次运行：
 
