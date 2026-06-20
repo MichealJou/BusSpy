@@ -51,17 +51,19 @@ textarea {
 }
 
 .tool-button {
-  width: 101px;
+  width: auto;
+  min-width: 92px;
   height: 33px;
-  padding: 0 12px;
+  padding: 0 14px;
   border-radius: 7px;
   color: #3c4655;
   font-size: 13px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .tool-button.compact-tool {
-  width: 77px;
+  min-width: 76px;
 }
 
 .tool-button.active {
@@ -278,7 +280,9 @@ textarea {
 }
 
 .terminal-line {
-  white-space: pre-wrap;
+  width: max-content;
+  min-width: 100%;
+  white-space: pre;
 }
 
 .terminal-line.rx {
@@ -321,21 +325,24 @@ textarea {
 }
 
 .send-card {
-  min-height: 166px;
+  min-height: 214px;
   display: grid;
-  grid-template-rows: auto 52px 40px;
-  row-gap: 12px;
+  grid-template-rows: auto 52px auto;
+  row-gap: 16px;
 }
 
 .panel-header.compact {
-  min-height: 28px;
-  margin-bottom: 10px;
+  min-height: 44px;
+  margin-bottom: 6px;
+  align-items: center;
 }
 
 .send-title-group {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .send-byte-count {
@@ -349,22 +356,24 @@ textarea {
 }
 
 .send-options {
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   justify-content: flex-end;
-  min-width: 520px;
+  min-width: 500px;
 }
 
 .send-mode-control {
-  height: 28px;
-  min-width: 150px;
-  flex: 0 0 150px;
+  height: 36px;
+  min-width: 116px;
+  flex: 0 0 116px;
 }
 
 .send-mode-control .mantine-SegmentedControl-label {
-  min-height: 24px;
-  min-width: 68px;
-  padding: 3px 14px;
+  min-height: 30px;
+  min-width: 52px;
+  padding: 5px 10px;
   font-size: 13px;
+  line-height: 20px;
   white-space: nowrap;
 }
 
@@ -422,8 +431,8 @@ textarea {
 }
 
 .frame-marker {
-  height: 178px;
-  min-height: 178px;
+  height: 224px;
+  min-height: 224px;
   padding: 12px;
   overflow: hidden;
   border: 1px solid #e4eaf2;
@@ -432,18 +441,18 @@ textarea {
 }
 
 .frame-marker-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: 118px 390px minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .frame-marker-title-group {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .frame-marker-hint {
@@ -459,28 +468,45 @@ textarea {
 .frame-marker-summary {
   color: #8b96a6;
   font-size: 12px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  justify-self: start;
+}
+
+.frame-marker-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
 }
 
 .frame-view-control {
-  min-width: 132px;
-  height: 28px;
+  width: 186px;
+  min-width: 186px;
+  height: 36px;
 }
 
 .frame-source-control {
-  min-width: 132px;
-  height: 28px;
+  width: 186px;
+  min-width: 186px;
+  height: 36px;
 }
 
 .frame-source-control .mantine-SegmentedControl-label,
 .frame-view-control .mantine-SegmentedControl-label {
-  min-height: 24px;
-  padding: 3px 10px;
+  min-height: 30px;
+  min-width: 82px;
+  padding: 5px 12px;
   font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
 }
 
 .frame-view-body {
-  height: 118px;
-  min-height: 118px;
+  height: 150px;
+  min-height: 150px;
   overflow: auto;
 }
 
@@ -492,7 +518,7 @@ textarea {
 }
 
 .frame-virtual-body {
-  height: 82px;
+  height: 108px;
   overflow-y: hidden;
   overflow-x: auto;
 }
@@ -634,16 +660,31 @@ textarea {
 }
 
 .send-extra-row {
-  display: grid;
-  grid-template-columns: 138px auto 20px 150px minmax(260px, 1fr);
+  display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: nowrap;
   min-width: 0;
-  height: 40px;
+  min-height: 48px;
 }
 
 .send-file-group {
   flex-wrap: nowrap;
+  flex: 0 0 auto;
+}
+
+.checksum-type-group,
+.checksum-range {
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+}
+
+.checksum-select {
+  width: 150px;
+}
+
+.checksum-range .mantine-TextInput-root {
+  width: 96px;
 }
 
 .command-option-name,
@@ -669,15 +710,16 @@ textarea {
 }
 
 .file-button {
-  height: 36px;
+  height: 40px;
+  min-width: 112px;
+  width: 112px;
+  padding: 0 16px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .hidden-file-input {
   display: none;
-}
-
-.checksum-select {
-  min-width: 0;
 }
 
 .checksum-select .mantine-Input-input,
@@ -696,14 +738,9 @@ textarea {
   flex-wrap: nowrap;
 }
 
-.checksum-range .mantine-TextInput-root {
-  width: 72px;
-}
-
 .quick-tabs {
-  min-height: 150px;
-  max-height: 260px;
-  overflow: hidden;
+  min-height: 296px;
+  overflow: visible;
 }
 
 .quick-tabs .mantine-Tabs-list {
@@ -711,8 +748,8 @@ textarea {
 }
 
 .quick-tabs .mantine-Tabs-panel {
-  min-height: 78px;
-  overflow: hidden;
+  min-height: 224px;
+  overflow: visible;
 }
 
 .quick-grid {
@@ -811,5 +848,17 @@ textarea {
   .send-actions {
     width: 100%;
     grid-template-columns: repeat(2, minmax(86px, 1fr));
+  }
+
+  .frame-marker-head {
+    grid-template-columns: 118px minmax(0, 1fr);
+  }
+
+  .frame-marker-controls {
+    flex-wrap: wrap;
+  }
+
+  .frame-marker-summary {
+    grid-column: 2;
   }
 }

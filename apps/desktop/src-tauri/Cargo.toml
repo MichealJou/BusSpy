@@ -1,6 +1,6 @@
 [package]
 name = "busspy"
-version = "0.1.2"
+version = "0.1.3"
 description = "BusSpy serial port assistant"
 authors = ["BusSpy"]
 edition = "2021"

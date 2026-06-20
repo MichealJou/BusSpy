@@ -25,6 +25,8 @@ export function FrameMarkerPanel({ state }: FrameMarkerPanelProps) {
         <div className="frame-marker-title-group">
           <Text className="frame-marker-title">{t("frameMarker")}</Text>
           <HelpTip label={t("frameMarkerHelp")} />
+        </div>
+        <div className="frame-marker-controls">
           <SegmentedControl
             className="frame-source-control"
             size="xs"
@@ -46,7 +48,7 @@ export function FrameMarkerPanel({ state }: FrameMarkerPanelProps) {
             onChange={(value) => setViewMode(value as "bytes" | "fields")}
           />
         </div>
-        <Text className="frame-marker-summary">{hasFrame ? `${t("byteIndex")} 0-${Math.max(0, marks.length - 1)}` : hint}</Text>
+        {hasFrame ? <Text className="frame-marker-summary">{`${t("byteIndex")} 0-${Math.max(0, marks.length - 1)}`}</Text> : <div />}
       </div>
       <div className="frame-view-body">
         {viewMode === "bytes" ? (

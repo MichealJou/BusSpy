@@ -1,5 +1,5 @@
 import { ActionIcon, Button, Checkbox, Combobox, Group, InputBase, Modal, SegmentedControl, Select, Tabs, Text, TextInput, Tooltip, useCombobox } from "@mantine/core";
-import { Pencil, RotateCcw, Send } from "lucide-react";
+import { FileUp, Pencil, RotateCcw, Send } from "lucide-react";
 import { useRef } from "react";
 import { useState } from "react";
 import { HelpTip } from "../../../components/help/HelpTip";
@@ -124,7 +124,6 @@ export function SendPanel({ state }: SendPanelProps) {
             <ActionIcon
               className="label-edit-button"
               variant="light"
-              disabled={!state.sendText.trim()}
               onClick={() => {
                 setLabelName("");
                 setLabelModalOpened(true);
@@ -163,27 +162,29 @@ export function SendPanel({ state }: SendPanelProps) {
             }}
           />
           <Group gap={4} className="send-file-group">
-            <Button variant="light" color="gray" className="file-button" onClick={() => fileInputRef.current?.click()}>
+            <Button variant="light" color="gray" className="file-button" leftSection={<FileUp size={16} />} onClick={() => fileInputRef.current?.click()}>
               {t("sendFile")}
             </Button>
             <HelpTip label={t("sendFileHelp")} />
           </Group>
-          <Text size="xs" c="dimmed" className="checksum-label">{t("checksum")}</Text>
-          <HelpTip label={t("checksumHelp")} />
-          <Select
-            className="checksum-select"
-            aria-label={t("checksum")}
-            data={[
-              { value: "none", label: "None" },
-              { value: "sum", label: "SUM" },
-              { value: "xor", label: "XOR" },
-              { value: "crc8", label: "CRC8" },
-              { value: "crc16", label: "CRC16" },
-              { value: "modbus-crc16", label: "Modbus CRC16" },
-            ]}
-            value={state.checksumType}
-            onChange={(value) => state.setChecksumType(value ?? "none")}
-          />
+          <Group gap={8} className="checksum-type-group">
+            <Text size="xs" c="dimmed" className="checksum-label">{t("checksum")}</Text>
+            <HelpTip label={t("checksumHelp")} />
+            <Select
+              className="checksum-select"
+              aria-label={t("checksum")}
+              data={[
+                { value: "none", label: "None" },
+                { value: "sum", label: "SUM" },
+                { value: "xor", label: "XOR" },
+                { value: "crc8", label: "CRC8" },
+                { value: "crc16", label: "CRC16" },
+                { value: "modbus-crc16", label: "Modbus CRC16" },
+              ]}
+              value={state.checksumType}
+              onChange={(value) => state.setChecksumType(value ?? "none")}
+            />
+          </Group>
           <Group gap="xs" className="checksum-range">
             <Text size="xs" c="dimmed">{t("checksumRange")}</Text>
             <HelpTip label={t("checksumRangeHelp")} />
@@ -195,6 +196,11 @@ export function SendPanel({ state }: SendPanelProps) {
       </div>
 
       <Modal opened={labelModalOpened} onClose={() => setLabelModalOpened(false)} title={t("addCommandLabel")} centered>
+        {!state.sendText.trim() ? (
+          <Text size="sm" c="dimmed" mb="sm">
+            {t("commandLabelNeedPayload")}
+          </Text>
+        ) : null}
         <TextInput
           label={t("commandLabel")}
           placeholder={t("commandLabelPlaceholder")}
@@ -207,7 +213,7 @@ export function SendPanel({ state }: SendPanelProps) {
             {t("cancel")}
           </Button>
           <Button
-            disabled={!labelName.trim()}
+            disabled={!labelName.trim() || !state.sendText.trim()}
             onClick={() => {
               void state.saveCurrentCommandLabel(labelName.trim()).then(() => {
                 setLabelName("");
