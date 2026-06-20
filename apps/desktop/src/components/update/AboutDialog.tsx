@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import { Badge, Button, Divider, Group, Modal, Stack, Text } from "@mantine/core";
+import { Badge, Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { useI18n } from "../../i18n";
 
-const RELEASES_URL = "https://github.com/MichealJou/BusSpy/releases";
+export type AboutSection = "about" | "protocol" | "policy";
 
 interface AboutDialogProps {
   opened: boolean;
   onClose: () => void;
+  section: AboutSection;
 }
 
-export function AboutDialog({ opened, onClose }: AboutDialogProps) {
+export function AboutDialog({ opened, onClose, section }: AboutDialogProps) {
   const { t } = useI18n();
   const [version, setVersion] = useState("0.1.0");
 
@@ -20,61 +21,52 @@ export function AboutDialog({ opened, onClose }: AboutDialogProps) {
       .catch(() => setVersion("0.1.0"));
   }, []);
 
+  const title = section === "protocol" ? t("releaseProtocol") : section === "policy" ? t("updatePolicy") : t("aboutBusSpy");
+
   return (
-    <Modal opened={opened} onClose={onClose} title={t("aboutBusSpy")} centered size="lg">
+    <Modal opened={opened} onClose={onClose} title={title} centered size="md">
       <Stack gap="md">
-        <div>
-          <Group gap="xs">
-            <Text fw={800} size="lg">BusSpy</Text>
-            <Badge color="blue" variant="light">v{version}</Badge>
-          </Group>
-          <Text c="dimmed" size="sm">
-            {t("aboutSummary")}
-          </Text>
-        </div>
+        {section === "about" ? (
+          <>
+            <div>
+              <Group gap="xs">
+                <Text fw={800} size="lg">BusSpy</Text>
+                <Badge color="blue" variant="light">v{version}</Badge>
+              </Group>
+              <Text c="dimmed" size="sm">
+                {t("aboutSummary")}
+              </Text>
+            </div>
+            <div>
+              <Text fw={700}>{t("platformSupport")}</Text>
+              <Text c="dimmed" size="sm">
+                macOS Apple Silicon / macOS Intel / Windows x64 / Linux x64
+              </Text>
+            </div>
+          </>
+        ) : null}
 
-        <Divider />
+        {section === "protocol" ? (
+          <div>
+            <Group gap="xs" mb={8}>
+              <Badge color="green" variant="light">SemVer</Badge>
+              <Badge color="gray" variant="light">MAJOR.MINOR.PATCH</Badge>
+            </Group>
+            <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
+              {t("releaseProtocolBody")}
+            </Text>
+          </div>
+        ) : null}
 
-        <div>
-          <Text fw={700}>{t("releaseProtocol")}</Text>
-          <Group gap="xs" mt={4} mb={6}>
-            <Badge color="green" variant="light">SemVer</Badge>
-            <Badge color="gray" variant="light">MAJOR.MINOR.PATCH</Badge>
-          </Group>
-          <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
-            {t("releaseProtocolBody")}
-          </Text>
-        </div>
-
-        <div>
-          <Text fw={700}>{t("updatePolicy")}</Text>
+        {section === "policy" ? (
           <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
             {t("updatePolicyBody")}
           </Text>
-        </div>
-
-        <div>
-          <Text fw={700}>{t("platformSupport")}</Text>
-          <Text c="dimmed" size="sm">
-            macOS Apple Silicon / macOS Intel / Windows x64 / Linux x64
-          </Text>
-        </div>
+        ) : null}
 
         <Group justify="flex-end">
-          <Button
-            variant="light"
-            color="blue"
-            onClick={() => {
-              window.dispatchEvent(new Event("busspy:check-update"));
-            }}
-          >
-            {t("checkUpdates")}
-          </Button>
           <Button variant="light" color="gray" onClick={onClose}>
             {t("close")}
-          </Button>
-          <Button component="a" href={RELEASES_URL} target="_blank" rel="noreferrer">
-            {t("openReleases")}
           </Button>
         </Group>
       </Stack>

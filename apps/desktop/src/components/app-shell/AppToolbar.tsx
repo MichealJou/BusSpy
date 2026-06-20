@@ -1,6 +1,8 @@
-import { Button, Select } from "@mantine/core";
-import { Copy, Download, Eraser, Info, Save, TerminalSquare } from "lucide-react";
+import { Button, Menu, Select } from "@mantine/core";
+import { Copy, Download, Eraser, FileText, Info, RefreshCw, Rocket, Save, ShieldCheck, TerminalSquare } from "lucide-react";
 import { useI18n, type Language } from "../../i18n";
+
+const RELEASES_URL = "https://github.com/MichealJou/BusSpy/releases";
 
 interface AppToolbarProps {
   hasLogs: boolean;
@@ -8,7 +10,7 @@ interface AppToolbarProps {
   onExportData: () => void;
   onCopyLogs: () => void;
   onClearLogs: () => void;
-  onOpenAbout: () => void;
+  onOpenAbout: (section: "about" | "protocol" | "policy") => void;
 }
 
 export function AppToolbar({ hasLogs, onDownloadLogs, onExportData, onCopyLogs, onClearLogs, onOpenAbout }: AppToolbarProps) {
@@ -31,9 +33,36 @@ export function AppToolbar({ hasLogs, onDownloadLogs, onExportData, onCopyLogs, 
       <Button className="tool-button compact-tool" variant="subtle" color="gray" leftSection={<Eraser size={16} />} onClick={onClearLogs}>
         {t("clear")}
       </Button>
-      <Button className="tool-button compact-tool" variant="subtle" color="gray" leftSection={<Info size={16} />} onClick={onOpenAbout}>
-        {t("about")}
-      </Button>
+      <Menu shadow="md" width={190} position="bottom-start">
+        <Menu.Target>
+          <Button className="tool-button compact-tool" variant="subtle" color="gray" leftSection={<Info size={16} />}>
+            {t("about")}
+          </Button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item leftSection={<Info size={15} />} onClick={() => onOpenAbout("about")}>
+            {t("aboutBusSpy")}
+          </Menu.Item>
+          <Menu.Item
+            leftSection={<RefreshCw size={15} />}
+            onClick={() => {
+              window.dispatchEvent(new Event("busspy:check-update"));
+            }}
+          >
+            {t("checkUpdates")}
+          </Menu.Item>
+          <Menu.Item leftSection={<FileText size={15} />} onClick={() => onOpenAbout("protocol")}>
+            {t("releaseProtocol")}
+          </Menu.Item>
+          <Menu.Item leftSection={<ShieldCheck size={15} />} onClick={() => onOpenAbout("policy")}>
+            {t("updatePolicy")}
+          </Menu.Item>
+          <Menu.Divider />
+          <Menu.Item leftSection={<Rocket size={15} />} component="a" href={RELEASES_URL} target="_blank" rel="noreferrer">
+            {t("openReleases")}
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
       <Select
         className="language-select"
         aria-label={t("language")}
