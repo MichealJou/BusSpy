@@ -116,7 +116,7 @@ export function UpdateChecker() {
         releaseNotes: trimReleaseNotes(release.body || ""),
       });
       setStatus("available");
-      setOpened(true);
+      setOpened(false);
     } catch {
       if (options.manual && !options.cancelled?.()) {
         setStatus("failed");
@@ -148,55 +148,65 @@ export function UpdateChecker() {
   }
 
   return (
-    <Modal opened={opened} onClose={() => setOpened(false)} title={status === "available" ? t("updateAvailable") : t("updateCheckResult")} centered size="md">
-      <Stack gap="md">
-        {status === "failed" ? (
-          <Text c="dimmed" size="sm">{t("updateCheckFailed")}</Text>
-        ) : (
-          <>
-            <Group gap="xs">
-              <Badge color="gray" variant="light">
-                {t("currentVersion")}: {formatVersion(updateInfo?.currentVersion ?? "0.0.0")}
-              </Badge>
-              <Badge color={status === "latest" ? "green" : "blue"} variant="light">
-                {t("latestVersion")}: {formatVersion(updateInfo?.latestVersion ?? "0.0.0")}
-              </Badge>
-            </Group>
+    <>
+      {status === "available" && updateInfo ? (
+        <section className="update-inline-card" aria-label={t("updateAvailable")}>
+          <div>
+            <Text fw={700} size="sm">{t("updateAvailable")}</Text>
+            <Text c="dimmed" size="xs">
+              {`${formatVersion(updateInfo.currentVersion)} -> ${formatVersion(updateInfo.latestVersion)}`}
+            </Text>
+          </div>
+          <Group gap="xs" wrap="nowrap">
+            <Button size="xs" variant="light" color="gray" onClick={() => {
+              setStatus("idle");
+              setUpdateInfo(null);
+            }}>
+              {t("remindLater")}
+            </Button>
+            <Button size="xs" variant="subtle" color="gray" onClick={() => {
+              window.localStorage.setItem(SKIPPED_VERSION_KEY, updateInfo.latestVersion);
+              setStatus("idle");
+              setUpdateInfo(null);
+            }}>
+              {t("skipVersion")}
+            </Button>
+            <Button size="xs" onClick={() => void openExternalUrl(updateInfo.releaseUrl)}>
+              {t("openDownloadPage")}
+            </Button>
+          </Group>
+        </section>
+      ) : null}
 
-            <div>
-              <Text fw={700}>{updateInfo?.releaseName}</Text>
-              <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
-                {releaseNotes}
-              </Text>
-            </div>
-          </>
-        )}
-
-        <Group justify="flex-end" gap="sm">
-          {status === "available" && updateInfo ? (
-            <>
-              <Button
-                variant="subtle"
-                color="gray"
-                onClick={() => {
-                  window.localStorage.setItem(SKIPPED_VERSION_KEY, updateInfo.latestVersion);
-                  setOpened(false);
-                }}
-              >
-                {t("skipVersion")}
-              </Button>
-              <Button variant="light" color="gray" onClick={() => setOpened(false)}>
-                {t("remindLater")}
-              </Button>
-              <Button onClick={() => void openExternalUrl(updateInfo.releaseUrl)}>
-                {t("openDownloadPage")}
-              </Button>
-            </>
+      <Modal opened={opened} onClose={() => setOpened(false)} title={t("updateCheckResult")} centered size="md">
+        <Stack gap="md">
+          {status === "failed" ? (
+            <Text c="dimmed" size="sm">{t("updateCheckFailed")}</Text>
           ) : (
-            <Button onClick={() => setOpened(false)}>{t("close")}</Button>
+            <>
+              <Group gap="xs">
+                <Badge color="gray" variant="light">
+                  {t("currentVersion")}: {formatVersion(updateInfo?.currentVersion ?? "0.0.0")}
+                </Badge>
+                <Badge color="green" variant="light">
+                  {t("latestVersion")}: {formatVersion(updateInfo?.latestVersion ?? "0.0.0")}
+                </Badge>
+              </Group>
+
+              <div>
+                <Text fw={700}>{updateInfo?.releaseName}</Text>
+                <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
+                  {releaseNotes}
+                </Text>
+              </div>
+            </>
           )}
-        </Group>
-      </Stack>
-    </Modal>
+
+          <Group justify="flex-end" gap="sm">
+            <Button onClick={() => setOpened(false)}>{t("close")}</Button>
+          </Group>
+        </Stack>
+      </Modal>
+    </>
   );
 }

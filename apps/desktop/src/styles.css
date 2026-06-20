@@ -81,6 +81,22 @@ textarea {
   margin-left: auto;
 }
 
+.update-inline-card {
+  position: fixed;
+  top: 64px;
+  right: 24px;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(420px, calc(100vw - 48px));
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  box-shadow: 0 14px 32px rgba(30, 64, 175, 0.14);
+}
+
 .workspace {
   min-height: 0;
   display: grid;
