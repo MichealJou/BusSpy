@@ -57,6 +57,15 @@ export function AboutDialog({ opened, onClose }: AboutDialogProps) {
         </div>
 
         <Group justify="flex-end">
+          <Button
+            variant="light"
+            color="blue"
+            onClick={() => {
+              window.dispatchEvent(new Event("busspy:check-update"));
+            }}
+          >
+            {t("checkUpdates")}
+          </Button>
           <Button variant="light" color="gray" onClick={onClose}>
             {t("close")}
           </Button>

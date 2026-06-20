@@ -21,6 +21,8 @@ interface UpdateInfo {
   releaseNotes: string;
 }
 
+type UpdateStatus = "idle" | "available" | "latest" | "failed";
+
 function normalizeVersion(version: string) {
   return version.trim().replace(/^v/i, "");
 }
@@ -53,93 +55,141 @@ export function UpdateChecker() {
   const { t } = useI18n();
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [opened, setOpened] = useState(false);
+  const [status, setStatus] = useState<UpdateStatus>("idle");
+
+  async function checkForUpdates(options: { manual: boolean; cancelled?: () => boolean }) {
+    try {
+      const [currentVersion, response] = await Promise.all([
+        getVersion(),
+        fetch(LATEST_RELEASE_URL, {
+          headers: {
+            Accept: "application/vnd.github+json",
+          },
+        }),
+      ]);
+
+      if (!response.ok) {
+        if (options.manual && !options.cancelled?.()) {
+          setStatus("failed");
+          setOpened(true);
+        }
+        return;
+      }
+
+      const release = (await response.json()) as GithubRelease;
+      const latestVersion = normalizeVersion(release.tag_name);
+      const skippedVersion = window.localStorage.getItem(SKIPPED_VERSION_KEY);
+
+      if (options.cancelled?.()) {
+        return;
+      }
+
+      if (!options.manual && skippedVersion === latestVersion) {
+        return;
+      }
+
+      if (compareVersions(latestVersion, currentVersion) <= 0) {
+        if (options.manual) {
+          setUpdateInfo({
+            currentVersion,
+            latestVersion: currentVersion,
+            releaseName: t("alreadyLatest"),
+            releaseUrl: release.html_url,
+            releaseNotes: t("alreadyLatestDetail"),
+          });
+          setStatus("latest");
+          setOpened(true);
+        }
+        return;
+      }
+
+      setUpdateInfo({
+        currentVersion,
+        latestVersion,
+        releaseName: release.name || release.tag_name,
+        releaseUrl: release.html_url,
+        releaseNotes: trimReleaseNotes(release.body || ""),
+      });
+      setStatus("available");
+      setOpened(true);
+    } catch {
+      if (options.manual && !options.cancelled?.()) {
+        setStatus("failed");
+        setOpened(true);
+      }
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
 
-    async function checkForUpdates() {
-      try {
-        const [currentVersion, response] = await Promise.all([
-          getVersion(),
-          fetch(LATEST_RELEASE_URL, {
-            headers: {
-              Accept: "application/vnd.github+json",
-            },
-          }),
-        ]);
-
-        if (!response.ok) return;
-
-        const release = (await response.json()) as GithubRelease;
-        const latestVersion = normalizeVersion(release.tag_name);
-        const skippedVersion = window.localStorage.getItem(SKIPPED_VERSION_KEY);
-
-        if (cancelled || skippedVersion === latestVersion || compareVersions(latestVersion, currentVersion) <= 0) {
-          return;
-        }
-
-        setUpdateInfo({
-          currentVersion,
-          latestVersion,
-          releaseName: release.name || release.tag_name,
-          releaseUrl: release.html_url,
-          releaseNotes: trimReleaseNotes(release.body || ""),
-        });
-        setOpened(true);
-      } catch {
-        // Update checks should never block normal app startup.
-      }
+    function handleManualCheck() {
+      void checkForUpdates({ manual: true, cancelled: () => cancelled });
     }
 
-    void checkForUpdates();
+    window.addEventListener("busspy:check-update", handleManualCheck);
+    void checkForUpdates({ manual: false, cancelled: () => cancelled });
 
     return () => {
       cancelled = true;
+      window.removeEventListener("busspy:check-update", handleManualCheck);
     };
-  }, []);
+  }, [t]);
 
   const releaseNotes = useMemo(() => updateInfo?.releaseNotes || t("updateNoNotes"), [t, updateInfo?.releaseNotes]);
 
-  if (!updateInfo) {
+  if (!updateInfo && status !== "failed") {
     return null;
   }
 
   return (
-    <Modal opened={opened} onClose={() => setOpened(false)} title={t("updateAvailable")} centered size="md">
+    <Modal opened={opened} onClose={() => setOpened(false)} title={status === "available" ? t("updateAvailable") : t("updateCheckResult")} centered size="md">
       <Stack gap="md">
-        <Group gap="xs">
-          <Badge color="gray" variant="light">
-            {t("currentVersion")}: {updateInfo.currentVersion}
-          </Badge>
-          <Badge color="blue" variant="light">
-            {t("latestVersion")}: {updateInfo.latestVersion}
-          </Badge>
-        </Group>
+        {status === "failed" ? (
+          <Text c="dimmed" size="sm">{t("updateCheckFailed")}</Text>
+        ) : (
+          <>
+            <Group gap="xs">
+              <Badge color="gray" variant="light">
+                {t("currentVersion")}: {updateInfo?.currentVersion}
+              </Badge>
+              <Badge color={status === "latest" ? "green" : "blue"} variant="light">
+                {t("latestVersion")}: {updateInfo?.latestVersion}
+              </Badge>
+            </Group>
 
-        <div>
-          <Text fw={700}>{updateInfo.releaseName}</Text>
-          <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
-            {releaseNotes}
-          </Text>
-        </div>
+            <div>
+              <Text fw={700}>{updateInfo?.releaseName}</Text>
+              <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
+                {releaseNotes}
+              </Text>
+            </div>
+          </>
+        )}
 
         <Group justify="flex-end" gap="sm">
-          <Button
-            variant="subtle"
-            color="gray"
-            onClick={() => {
-              window.localStorage.setItem(SKIPPED_VERSION_KEY, updateInfo.latestVersion);
-              setOpened(false);
-            }}
-          >
-            {t("skipVersion")}
-          </Button>
-          <Button variant="light" color="gray" onClick={() => setOpened(false)}>
-            {t("remindLater")}
-          </Button>
-          <Button component="a" href={updateInfo.releaseUrl} target="_blank" rel="noreferrer">
-            {t("openDownloadPage")}
-          </Button>
+          {status === "available" && updateInfo ? (
+            <>
+              <Button
+                variant="subtle"
+                color="gray"
+                onClick={() => {
+                  window.localStorage.setItem(SKIPPED_VERSION_KEY, updateInfo.latestVersion);
+                  setOpened(false);
+                }}
+              >
+                {t("skipVersion")}
+              </Button>
+              <Button variant="light" color="gray" onClick={() => setOpened(false)}>
+                {t("remindLater")}
+              </Button>
+              <Button component="a" href={updateInfo.releaseUrl} target="_blank" rel="noreferrer">
+                {t("openDownloadPage")}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => setOpened(false)}>{t("close")}</Button>
+          )}
         </Group>
       </Stack>
     </Modal>
