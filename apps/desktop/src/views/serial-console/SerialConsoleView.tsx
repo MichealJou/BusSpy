@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { AppToolbar, StatusBar } from "../../components/app-shell";
+import { AboutDialog } from "../../components/update/AboutDialog";
 import { ReceivePanel, SendPanel, SerialConfigPanel } from "../../features/serial-console/components";
 import { useSerialConsole } from "../../features/serial-console/hooks";
 import { useI18n } from "../../i18n";
@@ -6,15 +8,18 @@ import { useI18n } from "../../i18n";
 export function SerialConsoleView() {
   const { t } = useI18n();
   const serial = useSerialConsole(t);
+  const [aboutOpened, setAboutOpened] = useState(false);
 
   return (
     <div className="app-shell">
+      <AboutDialog opened={aboutOpened} onClose={() => setAboutOpened(false)} />
       <AppToolbar
         hasLogs={serial.logs.length > 0}
         onDownloadLogs={serial.downloadLogs}
         onExportData={serial.exportData}
         onCopyLogs={() => void serial.copyLogs()}
         onClearLogs={serial.clearLogs}
+        onOpenAbout={() => setAboutOpened(true)}
       />
 
       <main className="workspace">

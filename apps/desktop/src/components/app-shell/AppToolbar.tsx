@@ -1,5 +1,5 @@
 import { Button, Select } from "@mantine/core";
-import { Copy, Download, Eraser, Save, TerminalSquare } from "lucide-react";
+import { Copy, Download, Eraser, Info, Save, TerminalSquare } from "lucide-react";
 import { useI18n, type Language } from "../../i18n";
 
 interface AppToolbarProps {
@@ -8,9 +8,10 @@ interface AppToolbarProps {
   onExportData: () => void;
   onCopyLogs: () => void;
   onClearLogs: () => void;
+  onOpenAbout: () => void;
 }
 
-export function AppToolbar({ hasLogs, onDownloadLogs, onExportData, onCopyLogs, onClearLogs }: AppToolbarProps) {
+export function AppToolbar({ hasLogs, onDownloadLogs, onExportData, onCopyLogs, onClearLogs, onOpenAbout }: AppToolbarProps) {
   const { language, setLanguage, t } = useI18n();
 
   return (
@@ -29,6 +30,9 @@ export function AppToolbar({ hasLogs, onDownloadLogs, onExportData, onCopyLogs, 
       </Button>
       <Button className="tool-button compact-tool" variant="subtle" color="gray" leftSection={<Eraser size={16} />} onClick={onClearLogs}>
         {t("clear")}
+      </Button>
+      <Button className="tool-button compact-tool" variant="subtle" color="gray" leftSection={<Info size={16} />} onClick={onOpenAbout}>
+        {t("about")}
       </Button>
       <Select
         className="language-select"
