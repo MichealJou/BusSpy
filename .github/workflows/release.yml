@@ -91,6 +91,9 @@ jobs:
             - Linux：`.AppImage` / `.deb` / `.rpm`
 
             未签名版本首次运行可能需要手动允许，Linux 串口访问可能需要加入 `dialout` 用户组。
+
+            更新说明见：
+            https://github.com/MichealJou/BusSpy/blob/${{ github.ref_name }}/CHANGELOG.md
           releaseDraft: false
           prerelease: false
           releaseAssetNamePattern: BusSpy-[version]-[platform]-[arch]-[bundle][setup][ext]
