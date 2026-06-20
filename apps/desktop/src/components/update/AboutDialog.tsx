@@ -38,11 +38,18 @@ export function AboutDialog({ opened, onClose, section }: AboutDialogProps) {
               </Text>
             </div>
             <div>
+              <Text fw={700}>{t("author")}</Text>
+              <Text c="dimmed" size="sm">Felix Chou</Text>
+            </div>
+            <div>
               <Text fw={700}>{t("platformSupport")}</Text>
               <Text c="dimmed" size="sm">
                 macOS Apple Silicon / macOS Intel / Windows x64 / Linux x64
               </Text>
             </div>
+            <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
+              {t("aboutDetail")}
+            </Text>
           </>
         ) : null}
 
