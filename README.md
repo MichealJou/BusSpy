@@ -185,6 +185,8 @@ BusSpy 启动时会检查 GitHub Releases 最新版本。
 - 更新策略
 - GitHub Releases 下载入口
 
+底部状态栏会显示当前应用版本，例如 `v0.1.0`。
+
 版本号使用 SemVer 语义化版本：
 
 ```text

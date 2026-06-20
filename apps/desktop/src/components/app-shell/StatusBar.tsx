@@ -5,9 +5,10 @@ interface StatusBarProps {
   rxBytes: number;
   txBytes: number;
   connectionSummary: string;
+  appVersion: string;
 }
 
-export function StatusBar({ isConnected, rxBytes, txBytes, connectionSummary }: StatusBarProps) {
+export function StatusBar({ isConnected, rxBytes, txBytes, connectionSummary, appVersion }: StatusBarProps) {
   const { t } = useI18n();
 
   return (
@@ -16,6 +17,7 @@ export function StatusBar({ isConnected, rxBytes, txBytes, connectionSummary }: 
       <span>RX {rxBytes} B</span>
       <span>TX {txBytes} B</span>
       <span>{connectionSummary}</span>
+      <span>v{appVersion}</span>
     </footer>
   );
 }

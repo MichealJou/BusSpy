@@ -27,6 +27,10 @@ function normalizeVersion(version: string) {
   return version.trim().replace(/^v/i, "");
 }
 
+function formatVersion(version: string) {
+  return `v${normalizeVersion(version)}`;
+}
+
 function compareVersions(left: string, right: string) {
   const leftParts = normalizeVersion(left).split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
   const rightParts = normalizeVersion(right).split(/[.-]/).map((part) => Number.parseInt(part, 10) || 0);
@@ -151,10 +155,10 @@ export function UpdateChecker() {
           <>
             <Group gap="xs">
               <Badge color="gray" variant="light">
-                {t("currentVersion")}: {updateInfo?.currentVersion}
+                {t("currentVersion")}: {formatVersion(updateInfo?.currentVersion ?? "0.0.0")}
               </Badge>
               <Badge color={status === "latest" ? "green" : "blue"} variant="light">
-                {t("latestVersion")}: {updateInfo?.latestVersion}
+                {t("latestVersion")}: {formatVersion(updateInfo?.latestVersion ?? "0.0.0")}
               </Badge>
             </Group>
 

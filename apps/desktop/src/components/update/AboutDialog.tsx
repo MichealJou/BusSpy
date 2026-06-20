@@ -37,6 +37,10 @@ export function AboutDialog({ opened, onClose }: AboutDialogProps) {
 
         <div>
           <Text fw={700}>{t("releaseProtocol")}</Text>
+          <Group gap="xs" mt={4} mb={6}>
+            <Badge color="green" variant="light">SemVer</Badge>
+            <Badge color="gray" variant="light">MAJOR.MINOR.PATCH</Badge>
+          </Group>
           <Text c="dimmed" size="sm" style={{ whiteSpace: "pre-line" }}>
             {t("releaseProtocolBody")}
           </Text>

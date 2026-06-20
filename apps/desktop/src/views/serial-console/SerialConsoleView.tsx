@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { AppToolbar, StatusBar } from "../../components/app-shell";
 import { AboutDialog } from "../../components/update/AboutDialog";
 import { ReceivePanel, SendPanel, SerialConfigPanel } from "../../features/serial-console/components";
@@ -9,6 +10,13 @@ export function SerialConsoleView() {
   const { t } = useI18n();
   const serial = useSerialConsole(t);
   const [aboutOpened, setAboutOpened] = useState(false);
+  const [appVersion, setAppVersion] = useState("0.1.0");
+
+  useEffect(() => {
+    getVersion()
+      .then(setAppVersion)
+      .catch(() => setAppVersion("0.1.0"));
+  }, []);
 
   return (
     <div className="app-shell">
@@ -35,6 +43,7 @@ export function SerialConsoleView() {
         rxBytes={serial.rxBytes}
         txBytes={serial.txBytes}
         connectionSummary={connectionSummary(serial)}
+        appVersion={appVersion}
       />
     </div>
   );
