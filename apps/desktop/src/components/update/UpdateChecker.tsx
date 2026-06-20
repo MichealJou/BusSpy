@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { useI18n } from "../../i18n";
+import { openExternalUrl } from "../../tauri";
 
 const LATEST_RELEASE_URL = "https://api.github.com/repos/MichealJou/BusSpy/releases/latest";
 const SKIPPED_VERSION_KEY = "busspy.skippedUpdateVersion";
@@ -187,7 +188,7 @@ export function UpdateChecker() {
               <Button variant="light" color="gray" onClick={() => setOpened(false)}>
                 {t("remindLater")}
               </Button>
-              <Button component="a" href={updateInfo.releaseUrl} target="_blank" rel="noreferrer">
+              <Button onClick={() => void openExternalUrl(updateInfo.releaseUrl)}>
                 {t("openDownloadPage")}
               </Button>
             </>

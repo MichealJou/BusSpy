@@ -1,6 +1,7 @@
 import { Button, Menu, Select } from "@mantine/core";
 import { Copy, Download, Eraser, FileText, Info, RefreshCw, Rocket, Save, ShieldCheck, TerminalSquare } from "lucide-react";
 import { useI18n, type Language } from "../../i18n";
+import { openExternalUrl } from "../../tauri";
 
 const RELEASES_URL = "https://github.com/MichealJou/BusSpy/releases";
 
@@ -58,7 +59,7 @@ export function AppToolbar({ hasLogs, onDownloadLogs, onExportData, onCopyLogs, 
             {t("updatePolicy")}
           </Menu.Item>
           <Menu.Divider />
-          <Menu.Item leftSection={<Rocket size={15} />} component="a" href={RELEASES_URL} target="_blank" rel="noreferrer">
+          <Menu.Item leftSection={<Rocket size={15} />} onClick={() => void openExternalUrl(RELEASES_URL)}>
             {t("openReleases")}
           </Menu.Item>
         </Menu.Dropdown>

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 export interface SerialPortInfo {
   name: string;
@@ -115,4 +116,8 @@ export async function getAppLanguage(): Promise<"zh" | "en"> {
 
 export async function setAppLanguage(request: AppLanguageRequest): Promise<"zh" | "en"> {
   return invoke<"zh" | "en">("set_app_language", { request });
+}
+
+export async function openExternalUrl(url: string): Promise<void> {
+  return openUrl(url);
 }
