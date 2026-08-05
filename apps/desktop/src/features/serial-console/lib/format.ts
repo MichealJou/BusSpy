@@ -30,6 +30,14 @@ export function formatPayload(log: SerialLog, hexMode: boolean) {
   return hexMode ? log.hex ?? log.text : log.text;
 }
 
+// 给 rx/tx 数据加首尾笑脸定界符,方便看清每条数据的开始和结束。
+// system/error 是提示文字,不加包围。
+export function formatFramedPayload(log: SerialLog, hexMode: boolean) {
+  const payload = formatPayload(log, hexMode);
+  const isData = log.direction === "rx" || log.direction === "tx";
+  return isData ? `:-) ${payload} (-:` : payload;
+}
+
 export function nowStamp() {
   const now = new Date();
   return now.toLocaleTimeString("zh-CN", { hour12: false }) + `.${String(now.getMilliseconds()).padStart(3, "0")}`;

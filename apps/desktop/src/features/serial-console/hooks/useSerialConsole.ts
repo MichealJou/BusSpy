@@ -15,7 +15,7 @@ import {
   type SerialDataEvent,
   type SerialPortInfo,
 } from "../../../tauri";
-import { analyzeSendPayload, bytesToHex, formatPayload, hexByteLength, nowStamp, textByteLength } from "../lib/format";
+import { analyzeSendPayload, bytesToHex, formatFramedPayload, hexByteLength, nowStamp, textByteLength } from "../lib/format";
 import { appendChecksumToHexFrame } from "../lib/checksum";
 import { clearSavedSendHistory, loadSendHistory, rememberSendHistoryItem, saveSendHistoryItem } from "../lib/sendMemory";
 import type { SerialConsoleState, SerialLog, TransportMode } from "../lib/types";
@@ -43,6 +43,7 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
   const [remotePort, setRemotePort] = useState("502");
   const [localPort, setLocalPort] = useState("6000");
   const [isConnected, setIsConnected] = useState(false);
+  const [reconnectPending, setReconnectPending] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [sendText, setSendText] = useState("");
@@ -70,20 +71,38 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
   const terminalRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
   const isPausedRef = useRef(false);
+  const receiveBufferRef = useRef<{ bytes: number[]; firstAt: number } | null>(null);
+  const receiveTimerRef = useRef<number | null>(null);
+  const packetModeRef = useRef(packetMode);
+  const packetTimeoutRef = useRef(packetTimeoutMs);
+  const textDecoderRef = useRef(new TextDecoder());
+  const reconnectingRef = useRef(false);
+  const isConnectedRef = useRef(isConnected);
+  const reconnectPendingRef = useRef(reconnectPending);
+  const tRef = useRef(t);
+  const transportModeRef = useRef(transportMode);
+  const portRef = useRef(port);
 
   const portOptions = useMemo(
     () => ports.map((item) => ({ value: item.name, label: formatPortLabel(item) })),
     [ports],
   );
-  const connectionOptions = useMemo(
-    () => [
+  const connectionOptions = useMemo(() => {
+    const base: { value: string; label: string }[] = [
       { value: "tcp-client", label: "TCPClient" },
       { value: "tcp-server", label: "TCPServer" },
       { value: "udp", label: "UDP" },
       ...ports.map((item) => ({ value: `serial:${item.name}`, label: formatPortLabel(item) })),
-    ],
-    [ports],
-  );
+    ];
+    // 选中端口被拔(不在列表里),补一个占位项,避免 Select 显示空白
+    if (port && !ports.some((item) => item.name === port)) {
+      base.unshift({
+        value: `serial:${port}`,
+        label: `${formatPortLabel({ name: port, portType: "" })} (${t("disconnected")})`,
+      });
+    }
+    return base;
+  }, [ports, port, t]);
   const selectedConnection = transportMode === "serial" ? (port ? `serial:${port}` : null) : transportMode;
 
   const sendAnalysis = useMemo(() => analyzeSendPayload(sendText, sendHexMode, appendNewline), [sendText, sendHexMode, appendNewline]);
@@ -97,6 +116,38 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
         time: nowStamp(),
       },
     ]);
+  }
+
+  function flushReceiveBuffer() {
+    if (receiveTimerRef.current !== null) {
+      window.clearTimeout(receiveTimerRef.current);
+      receiveTimerRef.current = null;
+    }
+    const buffered = receiveBufferRef.current;
+    receiveBufferRef.current = null;
+    if (!buffered || buffered.bytes.length === 0) {
+      return;
+    }
+    const bytes = buffered.bytes;
+    appendLog({
+      direction: "rx",
+      text: textDecoderRef.current.decode(new Uint8Array(bytes)),
+      hex: bytesToHex(bytes),
+      byteLength: bytes.length,
+    });
+  }
+
+  function scheduleReceiveFlush(timeoutMs: number) {
+    // 仅在缓冲区首次收到数据时启动 flush 定时器。
+    // 后续到达的字节会追加进同一个缓冲区，不再推迟 flush，
+    // 避免数据持续到来时定时器被无限重置、缓冲区永不输出。
+    if (receiveTimerRef.current !== null) {
+      return;
+    }
+    receiveTimerRef.current = window.setTimeout(() => {
+      receiveTimerRef.current = null;
+      flushReceiveBuffer();
+    }, timeoutMs);
   }
 
   function setSelectedConnection(value: string | null) {
@@ -116,6 +167,22 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
   async function loadPorts({ silent = false }: { silent?: boolean } = {}) {
     try {
       const nextPorts = await listSerialPorts();
+      const nextNames = new Set(nextPorts.map((item) => item.name));
+
+      // 拔出检测(主信号):已连接串口模式下,选中的端口从枚举里消失 → 标记待重连。
+      // available_ports() 在所有平台上都能可靠反映物理存在,比 read 错误更可靠。
+      // 读 ref 避免 setInterval 闭包陈旧;门控只记一次。
+      if (
+        isConnectedRef.current &&
+        transportModeRef.current === "serial" &&
+        portRef.current &&
+        !nextNames.has(portRef.current) &&
+        !reconnectPendingRef.current
+      ) {
+        appendLog({ direction: "system", text: tRef.current("portDisconnectedReconnect"), byteLength: 0 });
+        setReconnectPending(true);
+      }
+
       setPorts((currentPorts) => {
         if (portListSignature(currentPorts) === portListSignature(nextPorts)) {
           return currentPorts;
@@ -123,12 +190,19 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
         return nextPorts;
       });
       setPort((currentPort) => {
-        if (currentPort && nextPorts.some((item) => item.name === currentPort)) {
-          return currentPort;
-        }
+        // 已连接:绝不让后台轮询覆盖当前选择
         if (isConnected) {
           return currentPort;
         }
+        // 端口还在:保留
+        if (currentPort && nextPorts.some((item) => item.name === currentPort)) {
+          return currentPort;
+        }
+        // 端口被拔:保留原端口名,等设备重新插入后自动恢复选中
+        if (currentPort) {
+          return currentPort;
+        }
+        // 从未选过:默认第一个
         return nextPorts[0]?.name ?? null;
       });
       setLastError(null);
@@ -155,6 +229,7 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
         }
         setIsConnected(false);
         setTimedSend(false);
+        setReconnectPending(false);
         appendLog({ direction: "system", text: t("portClosed"), byteLength: 0 });
       } catch (error) {
         setLastError(String(error));
@@ -302,12 +377,12 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
   }
 
   async function copyLogs() {
-    const content = logs.map((log) => `[${log.time}] ${log.direction.toUpperCase()} ${formatPayload(log, receiveHexMode)}`).join("\n");
+    const content = logs.map((log) => `[${log.time}] ${log.direction.toUpperCase()} ${formatFramedPayload(log, receiveHexMode)}`).join("\n");
     await navigator.clipboard.writeText(content);
   }
 
   function downloadLogs() {
-    const content = logs.map((log) => `[${log.time}] ${log.direction.toUpperCase()} ${formatPayload(log, receiveHexMode)}`).join("\n");
+    const content = logs.map((log) => `[${log.time}] ${log.direction.toUpperCase()} ${formatFramedPayload(log, receiveHexMode)}`).join("\n");
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -412,43 +487,146 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
     return () => window.clearInterval(timer);
   }, [isConnected]);
 
+  // 串口拔出后,等待设备重新插入自动重连(用上次的连接参数)。
+  // 依赖 ports:每 1.5s 轮询更新,端口重新出现时自动触发一次重连。
+  useEffect(() => {
+    if (!reconnectPending || transportMode !== "serial" || !port) {
+      return;
+    }
+    if (reconnectingRef.current) {
+      return;
+    }
+    // 原端口还没回来,等下一轮轮询
+    if (!ports.some((item) => item.name === port)) {
+      return;
+    }
+
+    reconnectingRef.current = true;
+    void (async () => {
+      try {
+        await openSerialPort({
+          name: port,
+          baudRate: Number(baudRate),
+          dataBits: Number(dataBit),
+          stopBits: stopBit,
+          parity,
+        });
+        setReconnectPending(false);
+        setLastError(null);
+        appendLog({ direction: "system", text: `${t("portOpened")}：${connectionText()}`, byteLength: 0 });
+      } catch (error) {
+        // 重连失败不循环重试,清待重连标志,记日志,让用户手动处理
+        setReconnectPending(false);
+        setLastError(String(error));
+        appendLog({ direction: "error", text: String(error), byteLength: 0 });
+      } finally {
+        reconnectingRef.current = false;
+      }
+    })();
+  }, [reconnectPending, ports, port, transportMode, baudRate, dataBit, stopBit, parity, t]);
+
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
   useEffect(() => {
+    packetModeRef.current = packetMode;
+  }, [packetMode]);
+
+  useEffect(() => {
+    packetTimeoutRef.current = packetTimeoutMs;
+  }, [packetTimeoutMs]);
+
+  useEffect(() => {
+    isConnectedRef.current = isConnected;
+  }, [isConnected]);
+
+  useEffect(() => {
+    reconnectPendingRef.current = reconnectPending;
+  }, [reconnectPending]);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
+  useEffect(() => {
+    transportModeRef.current = transportMode;
+  }, [transportMode]);
+
+  useEffect(() => {
+    portRef.current = port;
+  }, [port]);
+
+  useEffect(() => {
     let disposeData: (() => void) | undefined;
     let disposeError: (() => void) | undefined;
+    // listen() 返回 Promise,在 StrictMode 双挂载或快速重建时,
+    // cleanup 可能在 Promise resolve 之前执行,导致 unlisten 泄漏、监听器重复触发。
+    // 用 active 标志:Promise resolve 时若已 cleanup,立刻自清理。
+    let active = true;
 
     listen<SerialDataEvent>("serial-data", (event) => {
       const byteLength = event.payload.data.length;
       setRxBytes((value) => value + byteLength);
-      if (!isPausedRef.current) {
+      if (isPausedRef.current) {
+        return;
+      }
+
+      if (!packetModeRef.current) {
         appendLog({
           direction: "rx",
           text: event.payload.text,
           hex: event.payload.hex,
           byteLength,
         });
+        return;
       }
+
+      const buffered = receiveBufferRef.current;
+      if (buffered) {
+        buffered.bytes.push(...event.payload.data);
+      } else {
+        receiveBufferRef.current = {
+          bytes: [...event.payload.data],
+          firstAt: Date.now(),
+        };
+      }
+      const parsed = Number(packetTimeoutRef.current);
+      const timeoutMs = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 20;
+      scheduleReceiveFlush(timeoutMs);
     }).then((unlisten) => {
+      if (!active) {
+        unlisten();
+        return;
+      }
       disposeData = unlisten;
     });
 
     listen<string>("serial-error", (event) => {
       setLastError(event.payload);
       appendLog({ direction: "error", text: event.payload, byteLength: 0 });
-      setIsConnected(false);
-      setTimedSend(false);
+      // 串口物理断开时静默标记待重连:不改 isConnected(避免徽章闪烁),
+      // 等端口轮询发现设备重新插入后自动重连。
+      // 用 ref 读取最新值,避免监听器重建导致事件丢失或闭包陈旧。
+      if (isConnectedRef.current && !reconnectPendingRef.current) {
+        appendLog({ direction: "system", text: tRef.current("portDisconnectedReconnect"), byteLength: 0 });
+        setReconnectPending(true);
+      }
     }).then((unlisten) => {
+      if (!active) {
+        unlisten();
+        return;
+      }
       disposeError = unlisten;
     });
 
     return () => {
+      active = false;
+      flushReceiveBuffer();
       disposeData?.();
       disposeError?.();
     };
-  }, []);
+  }, [packetMode, packetTimeoutMs]);
 
   useEffect(() => {
     if (autoScroll) {

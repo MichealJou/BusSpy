@@ -2,7 +2,7 @@ import { ActionIcon, Group, Switch, Text, TextInput, Tooltip } from "@mantine/co
 import { Copy, Eraser, Pause, Play } from "lucide-react";
 import { HelpTip } from "../../../components/help/HelpTip";
 import { useI18n } from "../../../i18n";
-import { formatPayload } from "../lib/format";
+import { formatFramedPayload } from "../lib/format";
 import type { SerialConsoleState } from "../lib/types";
 
 interface ReceivePanelProps {
@@ -57,7 +57,7 @@ export function ReceivePanel({ state }: ReceivePanelProps) {
           state.logs.map((log) => (
             <div key={log.id} className={`terminal-line ${log.direction}`}>
               {state.showTimestamp ? <span className="terminal-time">[{log.time}]</span> : null} <span className="terminal-kind">{t(log.direction)}</span>{" "}
-              {formatPayload(log, state.receiveHexMode)}
+              {formatFramedPayload(log, state.receiveHexMode)}
             </div>
           ))
         )}
