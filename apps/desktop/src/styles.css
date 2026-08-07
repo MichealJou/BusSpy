@@ -280,9 +280,12 @@ textarea {
 }
 
 .terminal-line {
+  position: relative;
+  display: flex;
   width: max-content;
   min-width: 100%;
   white-space: pre;
+  align-items: baseline;
 }
 
 .terminal-line.rx {
@@ -302,13 +305,33 @@ textarea {
 }
 
 .terminal-time {
+  flex: 0 0 132px;
   color: #828c9c;
 }
 
 .terminal-kind {
-  display: inline-block;
-  min-width: 54px;
+  flex: 0 0 64px;
   color: #f2f5f8;
+}
+
+.terminal-payload {
+  flex: 0 0 auto;
+  white-space: pre;
+}
+
+.terminal-copy {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+
+.terminal-line:hover > .terminal-copy {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .terminal-empty {

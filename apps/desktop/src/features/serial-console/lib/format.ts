@@ -30,12 +30,13 @@ export function formatPayload(log: SerialLog, hexMode: boolean) {
   return hexMode ? log.hex ?? log.text : log.text;
 }
 
-// 给 rx/tx 数据加首尾笑脸定界符,方便看清每条数据的开始和结束。
-// system/error 是提示文字,不加包围。
+// 给 rx/tx 数据开头加笑脸标记,方便看清每条数据的开始。
+// 只放开头:设备返回的数据里常带 \r\n,放结尾会被挤到下一行;开头标记足够分辨边界。
+// system/error 是提示文字,不加标记。
 export function formatFramedPayload(log: SerialLog, hexMode: boolean) {
   const payload = formatPayload(log, hexMode);
   const isData = log.direction === "rx" || log.direction === "tx";
-  return isData ? `:-) ${payload} (-:` : payload;
+  return isData ? `:-) ${payload}` : payload;
 }
 
 export function nowStamp() {

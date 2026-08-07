@@ -1,9 +1,11 @@
 import { ActionIcon, Group, Switch, Text, TextInput, Tooltip } from "@mantine/core";
-import { Copy, Eraser, Pause, Play } from "lucide-react";
+import { Check, Copy, Eraser, Pause, Play } from "lucide-react";
+import { useState } from "react";
 import { HelpTip } from "../../../components/help/HelpTip";
 import { useI18n } from "../../../i18n";
-import { formatFramedPayload } from "../lib/format";
+import { formatFramedPayload, formatPayload } from "../lib/format";
 import type { SerialConsoleState } from "../lib/types";
+import type { SerialLog } from "../lib/types";
 
 interface ReceivePanelProps {
   state: SerialConsoleState;
@@ -11,6 +13,18 @@ interface ReceivePanelProps {
 
 export function ReceivePanel({ state }: ReceivePanelProps) {
   const { t } = useI18n();
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  async function copySingleLog(log: SerialLog) {
+    const content = formatPayload(log, state.receiveHexMode);
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedId(log.id);
+      window.setTimeout(() => setCopiedId((current) => (current === log.id ? null : current)), 1200);
+    } catch {
+      // 剪贴板不可用时静默失败,不打断用户
+    }
+  }
 
   return (
     <>
@@ -56,8 +70,25 @@ export function ReceivePanel({ state }: ReceivePanelProps) {
         ) : (
           state.logs.map((log) => (
             <div key={log.id} className={`terminal-line ${log.direction}`}>
-              {state.showTimestamp ? <span className="terminal-time">[{log.time}]</span> : null} <span className="terminal-kind">{t(log.direction)}</span>{" "}
-              {formatFramedPayload(log, state.receiveHexMode)}
+              {state.showTimestamp ? (
+                <span className="terminal-time">[{log.time}]</span>
+              ) : (
+                <span className="terminal-time" aria-hidden="true" />
+              )}
+              <span className="terminal-kind">{t(log.direction)}</span>
+              <span className="terminal-payload">{formatFramedPayload(log, state.receiveHexMode)}</span>
+              <Tooltip label={copiedId === log.id ? t("copied") : t("copyContent")} withArrow>
+                <ActionIcon
+                  className="terminal-copy"
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  onClick={() => void copySingleLog(log)}
+                  aria-label={t("copyContent")}
+                >
+                  {copiedId === log.id ? <Check size={14} /> : <Copy size={14} />}
+                </ActionIcon>
+              </Tooltip>
             </div>
           ))
         )}

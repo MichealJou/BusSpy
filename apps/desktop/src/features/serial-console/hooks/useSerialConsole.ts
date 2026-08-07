@@ -15,13 +15,15 @@ import {
   type SerialDataEvent,
   type SerialPortInfo,
 } from "../../../tauri";
-import { analyzeSendPayload, bytesToHex, formatFramedPayload, hexByteLength, nowStamp, textByteLength } from "../lib/format";
+import { analyzeSendPayload, bytesToHex, formatPayload, hexByteLength, nowStamp, textByteLength } from "../lib/format";
 import { appendChecksumToHexFrame } from "../lib/checksum";
 import { clearSavedSendHistory, loadSendHistory, rememberSendHistoryItem, saveSendHistoryItem } from "../lib/sendMemory";
 import type { SerialConsoleState, SerialLog, TransportMode } from "../lib/types";
 import type { TranslationKey } from "../../../i18n";
 
 function formatPortLabel(port: SerialPortInfo) {
+  // 只去掉路径前缀:/dev/cu.usbserial-310 → cu.usbserial-310;Windows COM3 原样。
+  // cu./tty. 前缀必须保留,否则分不清是哪个串口。
   return port.name.split("/").pop() ?? port.name;
 }
 
@@ -377,12 +379,12 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
   }
 
   async function copyLogs() {
-    const content = logs.map((log) => `[${log.time}] ${log.direction.toUpperCase()} ${formatFramedPayload(log, receiveHexMode)}`).join("\n");
+    const content = logs.map((log) => `[${log.time}] ${log.direction.toUpperCase()} ${formatPayload(log, receiveHexMode)}`).join("\n");
     await navigator.clipboard.writeText(content);
   }
 
   function downloadLogs() {
-    const content = logs.map((log) => `[${log.time}] ${log.direction.toUpperCase()} ${formatFramedPayload(log, receiveHexMode)}`).join("\n");
+    const content = logs.map((log) => `[${log.time}] ${log.direction.toUpperCase()} ${formatPayload(log, receiveHexMode)}`).join("\n");
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -557,13 +559,13 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
     portRef.current = port;
   }, [port]);
 
+  // 事件监听器只在挂载时注册一次,内部全部读 ref,绝不依赖任何 state。
+  // 这样 StrictMode 双挂载、packetMode/packetTimeoutMs 变化都不会重建监听器,
+  // 彻底避免事件丢失、buffer 状态混乱、监听器泄漏等问题。
   useEffect(() => {
-    let disposeData: (() => void) | undefined;
-    let disposeError: (() => void) | undefined;
-    // listen() 返回 Promise,在 StrictMode 双挂载或快速重建时,
-    // cleanup 可能在 Promise resolve 之前执行,导致 unlisten 泄漏、监听器重复触发。
-    // 用 active 标志:Promise resolve 时若已 cleanup,立刻自清理。
-    let active = true;
+    let unlistenData: (() => void) | undefined;
+    let unlistenError: (() => void) | undefined;
+    let disposed = false;
 
     listen<SerialDataEvent>("serial-data", (event) => {
       const byteLength = event.payload.data.length;
@@ -595,38 +597,36 @@ export function useSerialConsole(t: (key: TranslationKey) => string): SerialCons
       const timeoutMs = Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 20;
       scheduleReceiveFlush(timeoutMs);
     }).then((unlisten) => {
-      if (!active) {
+      if (disposed) {
         unlisten();
-        return;
+      } else {
+        unlistenData = unlisten;
       }
-      disposeData = unlisten;
     });
 
     listen<string>("serial-error", (event) => {
       setLastError(event.payload);
       appendLog({ direction: "error", text: event.payload, byteLength: 0 });
-      // 串口物理断开时静默标记待重连:不改 isConnected(避免徽章闪烁),
-      // 等端口轮询发现设备重新插入后自动重连。
-      // 用 ref 读取最新值,避免监听器重建导致事件丢失或闭包陈旧。
       if (isConnectedRef.current && !reconnectPendingRef.current) {
         appendLog({ direction: "system", text: tRef.current("portDisconnectedReconnect"), byteLength: 0 });
         setReconnectPending(true);
       }
     }).then((unlisten) => {
-      if (!active) {
+      if (disposed) {
         unlisten();
-        return;
+      } else {
+        unlistenError = unlisten;
       }
-      disposeError = unlisten;
     });
 
     return () => {
-      active = false;
+      disposed = true;
       flushReceiveBuffer();
-      disposeData?.();
-      disposeError?.();
+      unlistenData?.();
+      unlistenError?.();
     };
-  }, [packetMode, packetTimeoutMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (autoScroll) {
