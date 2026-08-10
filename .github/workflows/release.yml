@@ -71,6 +71,24 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      # 从 tag 提取版本号,强制写回 Cargo.toml 并同步到 package.json,
+      # 保证构建产物的版本号一定和 tag 一致,杜绝"tag 是 0.1.8 文件是 0.1.7"的问题。
+      - name: Sync version from tag
+        env:
+          TAG: ${{ github.event.release.tag_name || inputs.version || github.ref_name }}
+        run: |
+          # tag 形如 v0.1.8,去掉前导 v 得到 0.1.8
+          VERSION="${TAG#v}"
+          echo "tag=$TAG → version=$VERSION"
+          # 写回 Cargo.toml(版本号单一来源)
+          sed -i.bak -E "s/^version = \".*\"/version = \"$VERSION\"/" apps/desktop/src-tauri/Cargo.toml
+          rm -f apps/desktop/src-tauri/Cargo.toml.bak
+          # 同步到 package.json
+          node scripts/sync-version.mjs
+          echo "--- 确认版本号 ---"
+          grep '^version' apps/desktop/src-tauri/Cargo.toml
+          grep '"version"' apps/desktop/package.json
+
       # === macOS 路径:只构建不上传 → 重制 dmg 塞入信任脚本 → 手动上传 ===
       - name: Build (macOS, no upload)
         if: startsWith(matrix.platform, 'macos')

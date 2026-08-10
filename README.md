@@ -257,13 +257,25 @@ pnpm tauri:dev
 - macOS：`.dmg`
 - Linux：`.AppImage` / `.deb` / `.rpm`
 
-版本号来自：
+版本号以 `apps/desktop/src-tauri/Cargo.toml` 为唯一来源：
 
-- `apps/desktop/package.json`
-- `apps/desktop/src-tauri/tauri.conf.json`
-- `apps/desktop/src-tauri/Cargo.toml`
+- `Cargo.toml` 是版本号的源头（手动维护）。
+- `tauri.conf.json` 已删除 `version` 字段，构建时自动从 `Cargo.toml` 读取。
+- `apps/desktop/package.json` 由同步脚本自动保持一致。
 
-发布前需要保持三个文件里的版本号一致。
+发版前只需改 `Cargo.toml` 里的版本号，再跑一次同步命令：
+
+```bash
+# 1. 改 Cargo.toml 里的 version = "0.1.x"
+# 2. 同步到 package.json
+pnpm version:sync
+# 3. 提交并打 tag
+git commit -am "prepare release v0.1.x"
+git tag v0.1.x
+git push origin main v0.1.x
+```
+
+> 即使忘了改版本号也没关系：CI 会从 tag 自动提取版本号写回 `Cargo.toml` 和 `package.json`，保证构建产物的版本号和 tag 始终一致。
 
 发布 `v0.1.0` 示例：
 
