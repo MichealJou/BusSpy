@@ -121,3 +121,50 @@ export async function setAppLanguage(request: AppLanguageRequest): Promise<"zh" 
 export async function openExternalUrl(url: string): Promise<void> {
   return openUrl(url);
 }
+
+// ── 烧录器模块（flasher） ──────────────────────────────
+
+export interface FlashProbeInfo {
+  id: string;
+  vendor: string;
+  product: string;
+  uniqueId: string;
+  protocols: string[];
+}
+
+export interface FlashDependencyStatus {
+  installed: boolean;
+  version?: string;
+  error?: string;
+}
+
+export interface FlashBackendStatus {
+  mode: string;
+  python: string;
+  ready: boolean;
+  pyocd: FlashDependencyStatus | null;
+  pyserial: FlashDependencyStatus | null;
+  backendVersion: string;
+  mirrors: string[];
+}
+
+export interface FlashEventPayload {
+  event: string;
+  data: unknown;
+}
+
+export async function flashBackendStatus(): Promise<FlashBackendStatus> {
+  return invoke<FlashBackendStatus>("flash_backend_status");
+}
+
+export async function flashListProbes(): Promise<FlashProbeInfo[]> {
+  return invoke<FlashProbeInfo[]>("flash_list_probes");
+}
+
+export async function flashBootstrap(mirror: string): Promise<void> {
+  return invoke("flash_bootstrap", { mirror });
+}
+
+export async function flashBackendRestart(): Promise<void> {
+  return invoke("flash_backend_restart");
+}

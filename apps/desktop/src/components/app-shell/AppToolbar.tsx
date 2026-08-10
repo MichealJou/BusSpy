@@ -1,5 +1,5 @@
 import { Button, Menu, Select } from "@mantine/core";
-import { Copy, Download, Eraser, FileText, Info, RefreshCw, Rocket, Save, ShieldCheck, TerminalSquare } from "lucide-react";
+import { Copy, Download, Eraser, FileText, Info, RefreshCw, Rocket, Save, ShieldCheck } from "lucide-react";
 import { useI18n, type Language } from "../../i18n";
 import { openExternalUrl } from "../../tauri";
 
@@ -19,9 +19,6 @@ export function AppToolbar({ hasLogs, onDownloadLogs, onExportData, onCopyLogs, 
 
   return (
     <nav className="toolbar">
-      <Button className="tool-button active" variant="subtle" color="blue" leftSection={<TerminalSquare size={16} />}>
-        {t("serialAssistant")}
-      </Button>
       <Button className="tool-button" variant="subtle" color="gray" leftSection={<Save size={16} />} onClick={onDownloadLogs} disabled={!hasLogs}>
         {t("saveLog")}
       </Button>

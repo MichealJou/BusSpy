@@ -15,6 +15,8 @@ use std::{
 use rusqlite::{params, Connection};
 use tauri::{AppHandle, Emitter, Manager, State};
 
+mod flasher;
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SerialPortInfo {
@@ -823,6 +825,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(SerialState::default())
         .manage(NetworkState::default())
+        .manage(flasher::FlasherState::default())
         .invoke_handler(tauri::generate_handler![
             list_serial_ports,
             open_serial_port,
@@ -839,7 +842,11 @@ pub fn run() {
             delete_command_label,
             get_app_language,
             set_app_language,
-            emit_loopback_data
+            emit_loopback_data,
+            flasher::flash_backend_status,
+            flasher::flash_list_probes,
+            flasher::flash_bootstrap,
+            flasher::flash_backend_restart
         ])
         .run(tauri::generate_context!())
         .expect("error while running BusSpy");

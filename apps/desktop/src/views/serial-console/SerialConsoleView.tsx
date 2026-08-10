@@ -20,7 +20,7 @@ export function SerialConsoleView() {
   }, []);
 
   return (
-    <div className="app-shell">
+    <>
       <AboutDialog opened={aboutOpened} section={aboutSection} onClose={() => setAboutOpened(false)} />
       <AppToolbar
         hasLogs={serial.logs.length > 0}
@@ -49,7 +49,7 @@ export function SerialConsoleView() {
         connectionSummary={connectionSummary(serial)}
         appVersion={appVersion}
       />
-    </div>
+    </>
   );
 }
 

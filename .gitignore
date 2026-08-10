@@ -6,3 +6,5 @@ src-tauri/target
 *.log
 .DS_Store
 .idea/
+apps/desktop/flash-backend/.venv
+apps/desktop/flash-backend/build/

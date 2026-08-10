@@ -1,0 +1,5 @@
+# BusSpy 烧录器后端依赖
+# 烧录通道 A：SWD 调试器（CMSIS-DAP / ST-Link / J-Link）
+pyocd>=0.36,<1.0
+# 烧录通道 B：串口 ISP（STM32 AN3155 系统 bootloader，S2.5）
+pyserial>=3.5
