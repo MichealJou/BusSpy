@@ -5,7 +5,7 @@
 //!   2. 打包内置 sidecar（resource_dir/flash-backend，S5 阶段启用）
 //!   3. 开发模式：flash-backend/.venv 内的 python（不存在则用系统 python3）
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
@@ -275,14 +275,22 @@ fn resolve_backend_command(app: &AppHandle) -> Result<(String, Vec<String>, Path
 }
 
 /// 打包内置的侧车后端（S5 阶段由 PyInstaller 产物填充）。
+/// Tauri externalBin 会重命名为 `flash-backend-<target-triple>`，因此按前缀扫描。
 fn bundled_backend(app: &AppHandle) -> Option<PathBuf> {
     let resource_dir = app.path().resource_dir().ok()?;
-    let executable = if cfg!(windows) {
-        resource_dir.join("flash-backend.exe")
-    } else {
-        resource_dir.join("flash-backend")
-    };
-    executable.is_file().then_some(executable)
+    let entries = std::fs::read_dir(&resource_dir).ok()?;
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        let executable = if cfg!(windows) {
+            name.starts_with("flash-backend") && name.ends_with(".exe")
+        } else {
+            name.starts_with("flash-backend") && !name.contains('.')
+        };
+        if executable {
+            return Some(entry.path());
+        }
+    }
+    None
 }
 
 /// 后端源码目录（开发模式）。
@@ -491,4 +499,254 @@ pub fn flash_backend_restart(app: AppHandle) -> Result<(), String> {
     *guard = None;
     let _ = get_backend(&app)?;
     Ok(())
+}
+
+// ── 器件 / Pack ─────────────────────────────────────────
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlashTargetInfo {
+    name: String,
+    target: String,
+    family: String,
+    flash_kb: u32,
+    ram_kb: u32,
+    builtin: bool,
+}
+
+#[tauri::command]
+pub fn flash_list_targets(app: AppHandle) -> Result<Vec<FlashTargetInfo>, String> {
+    let backend = get_backend(&app)?;
+    let result = backend.call("target.list", Value::Null, BACKEND_TIMEOUT)?;
+    let targets = result
+        .get("targets")
+        .and_then(|value| value.as_array())
+        .ok_or_else(|| "器件列表格式错误".to_string())?;
+    targets
+        .iter()
+        .map(|item| {
+            Ok(FlashTargetInfo {
+                name: item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                target: item.get("target").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                family: item.get("family").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                flash_kb: item.get("flashKb").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                ram_kb: item.get("ramKb").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                builtin: item.get("builtin").and_then(|v| v.as_bool()).unwrap_or(false),
+            })
+        })
+        .collect()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlashPackInfo {
+    name: String,
+    version: String,
+    device_count: u32,
+}
+
+#[tauri::command]
+pub fn flash_list_packs(app: AppHandle) -> Result<Vec<FlashPackInfo>, String> {
+    let backend = get_backend(&app)?;
+    let result = backend.call("pack.list", Value::Null, BACKEND_TIMEOUT)?;
+    let packs = result
+        .get("packs")
+        .and_then(|value| value.as_array())
+        .ok_or_else(|| "Pack 列表格式错误".to_string())?;
+    packs
+        .iter()
+        .map(|item| {
+            Ok(FlashPackInfo {
+                name: item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                version: item.get("version").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                device_count: item.get("deviceCount").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+            })
+        })
+        .collect()
+}
+
+#[tauri::command]
+pub fn flash_import_pack(app: AppHandle, pack_path: String) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    let params = json!({ "path": pack_path });
+    backend.call("pack.import", params, Duration::from_secs(600))
+}
+
+// ── 烧录 / 芯片信息 / SN ────────────────────────────────
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FlashProgramOptions {
+    probe_id: String,
+    target: String,
+    file_path: String,
+    erase_mode: String,
+    verify: bool,
+    pack: Option<String>,
+    address: Option<u64>,
+}
+
+#[tauri::command]
+pub fn flash_program(app: AppHandle, options: FlashProgramOptions) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    let mut params = json!({
+        "probeId": options.probe_id,
+        "target": options.target,
+        "filePath": options.file_path,
+        "eraseMode": options.erase_mode,
+        "verify": options.verify,
+    });
+    if let Some(pack) = options.pack {
+        params["pack"] = json!(pack);
+    }
+    if let Some(address) = options.address {
+        params["address"] = json!(address);
+    }
+    backend.call("flash.program", params, Duration::from_secs(600))
+}
+
+#[tauri::command]
+pub fn flash_erase(app: AppHandle, probe_id: String, target: String, pack: Option<String>) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    let mut params = json!({ "probeId": probe_id, "target": target });
+    if let Some(pack) = pack {
+        params["pack"] = json!(pack);
+    }
+    backend.call("flash.erase", params, Duration::from_secs(300))
+}
+
+#[tauri::command]
+pub fn flash_read_chip_info(app: AppHandle, probe_id: String, target: String, pack: Option<String>) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    let mut params = json!({ "probeId": probe_id, "target": target });
+    if let Some(pack) = pack {
+        params["pack"] = json!(pack);
+    }
+    backend.call("flash.chipInfo", params, BACKEND_TIMEOUT)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SnOptions {
+    probe_id: String,
+    target: String,
+    address: u64,
+    format: String,
+    endian: Option<String>,
+    checksum: Option<String>,
+    length: Option<u32>,
+    value: Option<String>,
+    pack: Option<String>,
+}
+
+fn sn_params(options: &SnOptions) -> Value {
+    json!({
+        "probeId": options.probe_id,
+        "target": options.target,
+        "address": options.address,
+        "format": options.format,
+        "endian": options.endian.clone().unwrap_or_else(|| "little".to_string()),
+        "checksum": options.checksum.clone().unwrap_or_else(|| "none".to_string()),
+        "length": options.length,
+        "value": options.value.clone().unwrap_or_default(),
+        "pack": options.pack.clone(),
+    })
+}
+
+#[tauri::command]
+pub fn flash_read_sn(app: AppHandle, options: SnOptions) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    backend.call("sn.read", sn_params(&options), BACKEND_TIMEOUT)
+}
+
+#[tauri::command]
+pub fn flash_write_sn(app: AppHandle, options: SnOptions) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    backend.call("sn.write", sn_params(&options), Duration::from_secs(300))
+}
+
+// ── 串口 ISP ────────────────────────────────────────────
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IspProgramOptions {
+    port: String,
+    baud_rate: u32,
+    file_path: String,
+    address: u64,
+    verify: bool,
+}
+
+#[tauri::command]
+pub fn isp_program(app: AppHandle, options: IspProgramOptions) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    let params = json!({
+        "port": options.port,
+        "baudRate": options.baud_rate,
+        "filePath": options.file_path,
+        "address": options.address,
+        "verify": options.verify,
+    });
+    backend.call("isp.program", params, Duration::from_secs(600))
+}
+
+// ── 量产模式 ────────────────────────────────────────────
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProductionStartOptions {
+    target: String,
+    firmware_path: String,
+    erase_mode: Option<String>,
+    verify: Option<bool>,
+    pack: Option<String>,
+    sn_enabled: Option<bool>,
+    sn_address: Option<u64>,
+    sn_format: Option<String>,
+    sn_length: Option<u32>,
+    sn_checksum: Option<String>,
+    sn_endian: Option<String>,
+    sn_start: Option<u64>,
+    sn_step: Option<u64>,
+    sn_prefix: Option<String>,
+}
+
+#[tauri::command]
+pub fn production_start(app: AppHandle, options: ProductionStartOptions) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    let params = json!({
+        "target": options.target,
+        "firmwarePath": options.firmware_path,
+        "eraseMode": options.erase_mode.clone().unwrap_or_else(|| "auto".to_string()),
+        "verify": options.verify.unwrap_or(true),
+        "pack": options.pack.clone(),
+        "snEnabled": options.sn_enabled.unwrap_or(false),
+        "snAddress": options.sn_address.unwrap_or(0),
+        "snFormat": options.sn_format.clone().unwrap_or_else(|| "ascii".to_string()),
+        "snLength": options.sn_length,
+        "snChecksum": options.sn_checksum.clone().unwrap_or_else(|| "none".to_string()),
+        "snEndian": options.sn_endian.clone().unwrap_or_else(|| "little".to_string()),
+        "snStart": options.sn_start.unwrap_or(1),
+        "snStep": options.sn_step.unwrap_or(1),
+        "snPrefix": options.sn_prefix.clone().unwrap_or_default(),
+    });
+    backend.call("production.start", params, BACKEND_TIMEOUT)
+}
+
+#[tauri::command]
+pub fn production_stop(app: AppHandle) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    backend.call("production.stop", Value::Null, BACKEND_TIMEOUT)
+}
+
+#[tauri::command]
+pub fn production_stats(app: AppHandle) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    backend.call("production.stats", Value::Null, BACKEND_TIMEOUT)
+}
+
+#[tauri::command]
+pub fn production_records(app: AppHandle) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    backend.call("production.records", Value::Null, BACKEND_TIMEOUT)
 }

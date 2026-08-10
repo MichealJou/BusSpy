@@ -4,25 +4,104 @@ import {
   flashBackendRestart,
   flashBackendStatus,
   flashBootstrap,
+  flashErase,
+  flashImportPack,
+  flashListPacks,
   flashListProbes,
+  flashListTargets,
+  flashProgram,
+  flashReadChipInfo,
+  flashReadSn,
+  flashWriteSn,
+  ispProgram,
+  listSerialPorts,
+  productionRecords as productionRecordsRpc,
+  productionStart as productionStartRpc,
+  productionStats as productionStatsRpc,
+  productionStop as productionStopRpc,
   type FlashBackendStatus,
   type FlashEventPayload,
+  type FlashProgressEvent,
+  type ProductionRecord,
+  type ProductionStats,
 } from "../../../tauri";
-import type { FlasherStore } from "../lib/types";
+import {
+  DEFAULT_PRODUCTION_CONFIG,
+  DEFAULT_SN_CONFIG,
+  type FlasherStore,
+  type ProductionConfig,
+} from "../lib/types";
+
+function emptyRun(): FlasherStore["run"] {
+  return { running: false, phase: "", pct: 0, success: null, message: "", startedAt: 0 };
+}
 
 export function useFlasher(): FlasherStore {
   const [status, setStatus] = useState<FlashBackendStatus | null>(null);
   const [probes, setProbes] = useState<FlasherStore["probes"]>([]);
+  const [targets, setTargets] = useState<FlasherStore["targets"]>([]);
+  const [packs, setPacks] = useState<FlasherStore["packs"]>([]);
+  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [firmwarePath, setFirmwarePath] = useState<string | null>(null);
+  const [connectionMode, setConnectionModeState] = useState<FlasherStore["connectionMode"]>("swd");
+  const [serialPorts, setSerialPorts] = useState<string[]>([]);
+  const [selectedPort, setSelectedPortState] = useState<string | null>(null);
+  const [baudRate, setBaudRate] = useState(115200);
+  const [flashAddress, setFlashAddress] = useState<number | null>(null);
+  const [chipErase, setChipErase] = useState(false);
+  const [verifyAfterFlash, setVerifyAfterFlash] = useState(true);
+  const [run, setRun] = useState(emptyRun);
+  const [flashLogs, setFlashLogs] = useState<string[]>([]);
+  const [chipInfo, setChipInfo] = useState<FlasherStore["chipInfo"]>(null);
+  const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
   const [bootstrapLogs, setBootstrapLogs] = useState<string[]>([]);
   const [bootstrapSuccess, setBootstrapSuccess] = useState<boolean | null>(null);
+  const [snConfig, setSnConfigState] = useState(DEFAULT_SN_CONFIG);
+  const [currentSn, setCurrentSn] = useState<string | null>(null);
+  const [snValid, setSnValid] = useState<boolean | null>(null);
+  const [productionConfig, setProductionConfigState] = useState<ProductionConfig>(DEFAULT_PRODUCTION_CONFIG);
+  const [productionRunning, setProductionRunning] = useState(false);
+  const [productionStats, setProductionStats] = useState<ProductionStats>({ total: 0, ok: 0, fail: 0 });
+  const [productionRecords, setProductionRecords] = useState<ProductionRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // 事件监听用 ref 保持最新状态，避免闭包过期
   const statusRef = useRef<FlasherStore["status"]>(null);
   statusRef.current = status;
+  const selectedRef = useRef<string | null>(null);
+  selectedRef.current = selectedTarget;
+  const modeRef = useRef<FlasherStore["connectionMode"]>("swd");
+  modeRef.current = connectionMode;
+  const baudRef = useRef(baudRate);
+  baudRef.current = baudRate;
+  const portRef = useRef<string | null>(null);
+  portRef.current = selectedPort;
+  const addressRef = useRef<number | null>(null);
+  addressRef.current = flashAddress;
+  const chipEraseRef = useRef(false);
+  chipEraseRef.current = chipErase;
+  const verifyRef = useRef(true);
+  verifyRef.current = verifyAfterFlash;
+  const snConfigRef = useRef(DEFAULT_SN_CONFIG);
+  snConfigRef.current = snConfig;
+
+  const setSnConfig: FlasherStore["setSnConfig"] = useCallback((patch) => {
+    setSnConfigState((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const setProductionConfig: FlasherStore["setProductionConfig"] = useCallback((patch) => {
+    setProductionConfigState((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  const setConnectionMode: FlasherStore["setConnectionMode"] = useCallback((mode) => {
+    setConnectionModeState(mode);
+  }, []);
+
+  const setSelectedPort: FlasherStore["setSelectedPort"] = useCallback((port) => {
+    setSelectedPortState(port);
+  }, []);
 
   const checkEnvironment = useCallback(async () => {
     setChecking(true);
@@ -52,6 +131,46 @@ export function useFlasher(): FlasherStore {
     }
   }, []);
 
+  const loadTargets = useCallback(async () => {
+    setLoading(true);
+    try {
+      setTargets(await flashListTargets());
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadPacks = useCallback(async () => {
+    try {
+      setPacks(await flashListPacks());
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const refreshSerialPorts = useCallback(async () => {
+    try {
+      const ports = await listSerialPorts();
+      setSerialPorts(ports.map((port) => port.name));
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const importPack = useCallback(async (packPath: string) => {
+    setLoading(true);
+    try {
+      await flashImportPack(packPath);
+      await loadPacks();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [loadPacks]);
+
   const bootstrap = useCallback(async (mirror: string) => {
     setBootstrapping(true);
     setBootstrapSuccess(null);
@@ -66,22 +185,222 @@ export function useFlasher(): FlasherStore {
   }, []);
 
   const clearError = useCallback(() => setError(null), []);
+  const clearFlashLogs = useCallback(() => setFlashLogs([]), []);
 
-  // 挂载时先做环境自检，后端就绪后自动刷新探针
+  // ── 烧录 ────────────────────────────────────────────────
+  const flash = useCallback(async () => {
+    const target = selectedRef.current;
+    if (!target) {
+      setError("请先选择器件");
+      return;
+    }
+    const pack = (() => {
+      // 器件不是内置 pyOCD target 时，用已安装 Pack（后端自动从索引解析，无需显式传）
+      return null;
+    })();
+    setRun({ running: true, phase: "connecting", pct: 0, success: null, message: "", startedAt: Date.now() });
+    setFlashLogs((prev) => [...prev.slice(-200), `开始烧录：${target}`]);
+    setError(null);
+    try {
+      if (modeRef.current === "isp") {
+        if (baudRef.current <= 0) {
+          throw new Error("请选择串口");
+        }
+        const port = portRef.current ?? serialPorts[0] ?? "";
+        if (!port) {
+          throw new Error("请选择串口");
+        }
+        const result = await ispProgram({
+          port,
+          baudRate: baudRef.current,
+          filePath: firmwarePath ?? "",
+          address: addressRef.current ?? 0x08000000,
+          verify: verifyRef.current,
+        });
+        if (result.ok) {
+          setRun({ running: false, phase: "done", pct: 100, success: true, message: "烧录成功，校验通过", startedAt: 0 });
+        }
+        return;
+      }
+      const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+      if (!probe) {
+        throw new Error("未检测到烧录器");
+      }
+      const result = await flashProgram({
+        probeId: probe.uniqueId || probe.id,
+        target,
+        filePath: firmwarePath ?? "",
+        eraseMode: chipEraseRef.current ? "chip" : "auto",
+        verify: verifyRef.current,
+        pack,
+        address: addressRef.current,
+      });
+      setRun({
+        running: false,
+        phase: "done",
+        pct: 100,
+        success: true,
+        message: result.verified ? "烧录成功，校验通过" : "烧录成功",
+        startedAt: 0,
+      });
+    } catch (err) {
+      setRun({ running: false, phase: "error", pct: 0, success: false, message: String(err), startedAt: 0 });
+      setFlashLogs((prev) => [...prev, `烧录失败：${String(err)}`]);
+    }
+  }, [probes, firmwarePath, serialPorts]);
+
+  const erase = useCallback(async () => {
+    const target = selectedRef.current;
+    const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+    if (!target || !probe) {
+      setError("请先选择器件并连接烧录器");
+      return;
+    }
+    setRun({ running: true, phase: "erase", pct: 0, success: null, message: "", startedAt: Date.now() });
+    try {
+      await flashErase(probe.uniqueId || probe.id, target);
+      setRun({ running: false, phase: "done", pct: 100, success: true, message: "整片擦除完成", startedAt: 0 });
+    } catch (err) {
+      setRun({ running: false, phase: "error", pct: 0, success: false, message: String(err), startedAt: 0 });
+    }
+  }, [probes]);
+
+  const readChipInfo = useCallback(async () => {
+    const target = selectedRef.current;
+    const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+    if (!target || !probe) {
+      setError("请先选择器件并连接烧录器");
+      return;
+    }
+    setError(null);
+    try {
+      setChipInfo(await flashReadChipInfo(probe.uniqueId || probe.id, target));
+    } catch (err) {
+      setError(`读取芯片信息失败：${String(err)}`);
+    }
+  }, [probes]);
+
+  // ── SN ─────────────────────────────────────────────────
+  const readSn = useCallback(async () => {
+    const target = selectedRef.current;
+    const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+    if (!target || !probe) {
+      setError("请先选择器件并连接烧录器");
+      return;
+    }
+    setError(null);
+    try {
+      const result = await flashReadSn({
+        probeId: probe.uniqueId || probe.id,
+        target,
+        address: snConfigRef.current.address,
+        format: snConfigRef.current.format,
+        endian: snConfigRef.current.endian,
+        checksum: snConfigRef.current.checksum,
+        length: snConfigRef.current.length,
+      });
+      setCurrentSn(result.value);
+      setSnValid(result.valid);
+    } catch (err) {
+      setError(`读取 SN 失败：${String(err)}`);
+    }
+  }, [probes]);
+
+  const writeSn = useCallback(async (value: string) => {
+    const target = selectedRef.current;
+    const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+    if (!target || !probe) {
+      setError("请先选择器件并连接烧录器");
+      return false;
+    }
+    setError(null);
+    try {
+      const result = await flashWriteSn({
+        probeId: probe.uniqueId || probe.id,
+        target,
+        address: snConfigRef.current.address,
+        format: snConfigRef.current.format,
+        endian: snConfigRef.current.endian,
+        checksum: snConfigRef.current.checksum,
+        length: snConfigRef.current.length,
+        value,
+      });
+      setCurrentSn(result.value);
+      setSnValid(result.valid);
+      return result.ok;
+    } catch (err) {
+      setError(`写入 SN 失败：${String(err)}`);
+      return false;
+    }
+  }, [probes]);
+
+  // ── 量产 ────────────────────────────────────────────────
+  const productionStart = useCallback(async () => {
+    const target = selectedRef.current;
+    if (!target || !firmwarePath) {
+      setError("量产前请先选择器件和固件");
+      return;
+    }
+    setError(null);
+    try {
+      await productionStartRpc({
+        target,
+        firmwarePath,
+        eraseMode: chipEraseRef.current ? "chip" : "auto",
+        verify: verifyRef.current,
+        snEnabled: productionConfig.snEnabled,
+        snAddress: productionConfig.snAddress,
+        snFormat: productionConfig.snFormat,
+        snLength: productionConfig.snLength,
+        snChecksum: productionConfig.snChecksum,
+        snEndian: productionConfig.snEndian,
+        snStart: productionConfig.snStart,
+        snStep: productionConfig.snStep,
+        snPrefix: productionConfig.snPrefix,
+      });
+      setProductionRunning(true);
+      await productionStatsRpc().then((value) => setProductionStats(value.stats));
+    } catch (err) {
+      setError(`启动量产失败：${String(err)}`);
+    }
+  }, [selectedTarget, firmwarePath, productionConfig]);
+
+  const productionStop = useCallback(async () => {
+    try {
+      await productionStopRpc();
+      setProductionRunning(false);
+      await productionStatsRpc().then((value) => setProductionStats(value.stats));
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const refreshProductionRecords = useCallback(async () => {
+    try {
+      const result = await productionRecordsRpc();
+      setProductionRecords(result.records);
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  // ── 初始化：环境自检 + 器件库 ──────────────────────────
   useEffect(() => {
     void checkEnvironment().then(() => {
       if (statusRef.current?.ready) {
-        void refreshProbes();
+        void Promise.all([refreshProbes(), loadTargets(), loadPacks(), refreshSerialPorts()]);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 订阅后端异步事件（进度 / 退出）与初始化日志
+  // ── 订阅后端事件 ────────────────────────────────────────
   useEffect(() => {
     let unlistenEvent: UnlistenFn | undefined;
     let unlistenLog: UnlistenFn | undefined;
     let unlistenDone: UnlistenFn | undefined;
+    let unlistenProdRecord: UnlistenFn | undefined;
+    let unlistenProdStats: UnlistenFn | undefined;
 
     listen<FlashEventPayload>("flash-event", (event) => {
       const payload = event.payload;
@@ -89,7 +408,12 @@ export function useFlasher(): FlasherStore {
         setStatus((prev) => (prev ? { ...prev, ready: false } : prev));
       }
       if (payload.event === "flash.progress") {
-        // S2 烧录进度在此驱动
+        const data = payload.data as FlashProgressEvent;
+        setRun((prev) => ({ ...prev, phase: data.phase, pct: data.pct }));
+      }
+      if (payload.event === "flash.log") {
+        const message = (payload.data as { message?: string }).message ?? "";
+        setFlashLogs((prev) => [...prev.slice(-200), message]);
       }
     }).then((fn) => {
       unlistenEvent = fn;
@@ -107,7 +431,6 @@ export function useFlasher(): FlasherStore {
       setBootstrapSuccess(success);
       setBootstrapping(false);
       if (success) {
-        // 初始化完成：重启后端（切换 venv 解释器）并重新自检
         void flashBackendRestart()
           .then(checkEnvironment)
           .catch((err) => setError(String(err)));
@@ -116,10 +439,24 @@ export function useFlasher(): FlasherStore {
       unlistenDone = fn;
     });
 
+    listen<ProductionRecord>("production.record", (event) => {
+      setProductionRecords((prev) => [event.payload, ...prev].slice(0, 500));
+    }).then((fn) => {
+      unlistenProdRecord = fn;
+    });
+
+    listen<{ stats: ProductionStats }>("production.stats", (event) => {
+      setProductionStats(event.payload.stats);
+    }).then((fn) => {
+      unlistenProdStats = fn;
+    });
+
     return () => {
       unlistenEvent?.();
       unlistenLog?.();
       unlistenDone?.();
+      unlistenProdRecord?.();
+      unlistenProdStats?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -127,15 +464,60 @@ export function useFlasher(): FlasherStore {
   return {
     status,
     probes,
+    targets,
+    packs,
+    selectedTarget,
+    firmwarePath,
+    connectionMode,
+    serialPorts,
+    selectedPort,
+    baudRate,
+    flashAddress,
+    chipErase,
+    verifyAfterFlash,
+    run,
+    flashLogs,
+    chipInfo,
+    loading,
     checking,
     refreshing,
     bootstrapping,
     bootstrapLogs,
     bootstrapSuccess,
+    snConfig,
+    currentSn,
+    snValid,
+    productionRunning,
+    productionStats,
+    productionRecords,
+    productionConfig,
     error,
     checkEnvironment,
     refreshProbes,
+    loadTargets,
+    loadPacks,
+    refreshSerialPorts,
     bootstrap,
+    setSelectedTarget,
+    setFirmwarePath,
+    setConnectionMode,
+    setSelectedPort,
+    setBaudRate,
+    setFlashAddress,
+    setChipErase,
+    setVerifyAfterFlash,
+    setSnConfig,
+    importPack,
+    flash,
+    erase,
+    readChipInfo,
+    readSn,
+    writeSn,
+    productionStart,
+    productionStop,
+    refreshProductionRecords,
+    setProductionConfig,
     clearError,
+    clearFlashLogs,
   };
 }

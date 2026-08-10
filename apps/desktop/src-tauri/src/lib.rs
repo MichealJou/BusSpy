@@ -823,6 +823,7 @@ mod tests {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(SerialState::default())
         .manage(NetworkState::default())
         .manage(flasher::FlasherState::default())
@@ -846,7 +847,20 @@ pub fn run() {
             flasher::flash_backend_status,
             flasher::flash_list_probes,
             flasher::flash_bootstrap,
-            flasher::flash_backend_restart
+            flasher::flash_backend_restart,
+            flasher::flash_list_targets,
+            flasher::flash_list_packs,
+            flasher::flash_import_pack,
+            flasher::flash_program,
+            flasher::flash_erase,
+            flasher::flash_read_chip_info,
+            flasher::flash_read_sn,
+            flasher::flash_write_sn,
+            flasher::isp_program,
+            flasher::production_start,
+            flasher::production_stop,
+            flasher::production_stats,
+            flasher::production_records
         ])
         .run(tauri::generate_context!())
         .expect("error while running BusSpy");

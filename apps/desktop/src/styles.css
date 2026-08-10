@@ -1021,3 +1021,44 @@ textarea {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+.flasher-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+  align-items: stretch;
+}
+
+.flasher-topbar .env-panel,
+.flasher-topbar .probe-panel {
+  min-height: 96px;
+}
+
+.program-grid {
+  margin-bottom: 14px;
+}
+
+.flash-actions-card {
+  grid-column: 1 / -1;
+}
+
+.flash-log-panel {
+  grid-column: 1 / -1;
+  padding: 10px 14px;
+}
+
+.path-break {
+  word-break: break-all;
+}
+
+.production-records-card {
+  grid-column: 1 / -1;
+}
+
+.sn-config-box {
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: #fafcff;
+}

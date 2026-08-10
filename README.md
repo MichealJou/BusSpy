@@ -310,3 +310,40 @@ cd apps/desktop/src-tauri
 cargo check
 cargo test
 ```
+
+---
+
+## 烧录器模块（Programmer）
+
+BusSpy 内置**通用烧录器**模块（侧边栏「烧录器」），支持：
+
+### 支持的烧录方式
+| 方式 | 说明 | macOS | Windows |
+|------|------|-------|---------|
+| SWD 烧录器 | CMSIS-DAP / DAPLink / ST-Link（免驱动），J-Link（需装 SEGGER 软件包，App 内引导） | ✅ | ✅ |
+| 串口 ISP | STM32 系统 bootloader（AN3155），USB 转串口即可，需 BOOT0 拉高 | ✅ | ✅ |
+
+### 芯片支持（三级）
+1. **内置器件库**：预置常用 STM32 / GD32 器件（`apps/desktop/flash-backend/devices/devices.json`），离线可用
+2. **官方 Pack 导入**：导入厂商 CMSIS DFP（.pack 文件，如 `Keil.STM32F4xx_DFP`），器件库自动扩展
+3. 在线搜索安装（增强，后续迭代）
+
+### 功能
+- **单烧**：器件选择 / 固件选择（hex/bin/elf）/ 配置参数（烧录地址、整片擦除、烧后校验）/ 进度 + 日志 / 芯片信息读取
+- **SN 工具**：读 / 写 / 修改序列号（ASCII / BCD / uint32 / uint64，CRC16/CRC32 校验，地址可配）
+- **量产**：插板自动烧录 + 自动递增 SN + 通过率统计 + 记录导出 CSV
+
+### 环境自举（自动初始化）
+首次使用若缺 Python / pyOCD，烧录页会引导一键初始化：自动创建虚拟环境并从**国内镜像**（清华 / 阿里云 / 中科大）安装依赖，无需手动操作。
+
+### 后端架构
+- Python pyOCD 侧车进程：`apps/desktop/flash-backend/`（JSON-RPC over stdio）
+- 发布时用 PyInstaller 打包为单文件随 App 分发，用户机器无需安装 Python：
+  ```bash
+  ./scripts/build-sidecar.sh
+  ```
+  打包产物由 `tauri.conf.json` 的 `externalBin` 自动带入 dmg / msi。
+
+### 已知限制
+- **ATK-HS-V3 CMSIS-DAP（正点原子，2019 固件）**：pyOCD 0.45 打开该探针的 HID 会话可能超时（探针固件兼容问题）。遇到 `Timeout reading from probe` 时：拔插复位探针、更新探针固件，或换用标准 DAPLink / ST-Link / J-Link。
+- J-Link 依赖 SEGGER 官方运行时，缺失时 App 内引导安装。

@@ -13,7 +13,17 @@ import traceback
 from typing import Any, Callable
 
 from . import __version__
+from .flash import chip_info, erase, program as flash_program
+from .packs import import_pack, list_packs
 from .probes import list_probes
+from .production import records as production_records
+from .production import start as production_start
+from .production import stats as production_stats
+from .production import stop as production_stop
+from .serial_isp import program as isp_program
+from .sn import read as sn_read
+from .sn import write as sn_write
+from .targets import list_targets
 
 
 def env_status(_params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -42,17 +52,20 @@ HANDLERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "ping": lambda _params: {"pong": True, "version": __version__},
     "env.status": env_status,
     "probe.list": list_probes,
+    "target.list": list_targets,
+    "pack.list": list_packs,
+    "pack.import": import_pack,
+    "flash.program": flash_program,
+    "flash.erase": erase,
+    "flash.chipInfo": chip_info,
+    "sn.read": sn_read,
+    "sn.write": sn_write,
+    "isp.program": isp_program,
+    "production.start": production_start,
+    "production.stop": production_stop,
+    "production.stats": production_stats,
+    "production.records": production_records,
 }
-
-
-def emit(event: str, data: dict[str, Any]) -> None:
-    """向宿主推送异步事件（如烧录进度）。"""
-    _write({"event": event, "data": data})
-
-
-def _write(payload: dict[str, Any]) -> None:
-    sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
-    sys.stdout.flush()
 
 
 def serve() -> None:
@@ -75,6 +88,11 @@ def serve() -> None:
         except Exception as exc:  # noqa: BLE001 - 进程级兜底，任何异常都不能杀死后端
             traceback.print_exc(file=sys.stderr)
             _write({"id": req_id, "error": str(exc)})
+
+
+def _write(payload: dict[str, Any]) -> None:
+    sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":

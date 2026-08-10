@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 export interface SerialPortInfo {
@@ -167,4 +168,157 @@ export async function flashBootstrap(mirror: string): Promise<void> {
 
 export async function flashBackendRestart(): Promise<void> {
   return invoke("flash_backend_restart");
+}
+
+export interface FlashTargetInfo {
+  name: string;
+  target: string;
+  family: string;
+  flashKb: number;
+  ramKb: number;
+  builtin: boolean;
+}
+
+export interface FlashPackInfo {
+  name: string;
+  version: string;
+  deviceCount: number;
+}
+
+export interface FlashProgramOptions {
+  probeId: string;
+  target: string;
+  filePath: string;
+  eraseMode: "auto" | "chip";
+  verify: boolean;
+  pack?: string | null;
+  address?: number | null;
+}
+
+export interface SnOptions {
+  probeId: string;
+  target: string;
+  address: number;
+  format: string;
+  endian?: string;
+  checksum?: string;
+  length?: number | null;
+  value?: string;
+  pack?: string | null;
+}
+
+export interface IspProgramOptions {
+  port: string;
+  baudRate: number;
+  filePath: string;
+  address: number;
+  verify: boolean;
+}
+
+export interface ProductionStartOptions {
+  target: string;
+  firmwarePath: string;
+  eraseMode?: string;
+  verify?: boolean;
+  pack?: string | null;
+  snEnabled?: boolean;
+  snAddress?: number;
+  snFormat?: string;
+  snLength?: number | null;
+  snChecksum?: string;
+  snEndian?: string;
+  snStart?: number;
+  snStep?: number;
+  snPrefix?: string;
+}
+
+export interface FlashChipInfo {
+  flashSize?: number | null;
+  chipId?: string | null;
+  coreId?: string | null;
+  uid: string[];
+  target?: string;
+}
+
+export interface FlashProgressEvent {
+  phase: string;
+  pct: number;
+}
+
+export interface ProductionRecord {
+  id: string;
+  probeId: string;
+  product: string;
+  uid: string;
+  sn: string;
+  ok: boolean;
+  message: string;
+  durationMs: number;
+}
+
+export interface ProductionStats {
+  total: number;
+  ok: number;
+  fail: number;
+}
+
+export async function flashListTargets(): Promise<FlashTargetInfo[]> {
+  return invoke<FlashTargetInfo[]>("flash_list_targets");
+}
+
+export async function flashListPacks(): Promise<FlashPackInfo[]> {
+  return invoke<FlashPackInfo[]>("flash_list_packs");
+}
+
+export async function flashImportPack(packPath: string): Promise<unknown> {
+  return invoke("flash_import_pack", { packPath });
+}
+
+export async function flashProgram(options: FlashProgramOptions): Promise<{ ok: boolean; verified: boolean }> {
+  return invoke("flash_program", { options });
+}
+
+export async function flashErase(probeId: string, target: string, pack?: string | null): Promise<unknown> {
+  return invoke("flash_erase", { probeId, target, pack: pack ?? null });
+}
+
+export async function flashReadChipInfo(probeId: string, target: string, pack?: string | null): Promise<FlashChipInfo> {
+  return invoke("flash_read_chip_info", { probeId, target, pack: pack ?? null });
+}
+
+export async function flashReadSn(options: SnOptions): Promise<{ value: string; raw: number[]; valid: boolean }> {
+  return invoke("flash_read_sn", { options });
+}
+
+export async function flashWriteSn(options: SnOptions): Promise<{ ok: boolean; value: string; valid: boolean }> {
+  return invoke("flash_write_sn", { options });
+}
+
+export async function ispProgram(options: IspProgramOptions): Promise<{ ok: boolean; chipId: string; verified: boolean }> {
+  return invoke("isp_program", { options });
+}
+
+export async function productionStart(options: ProductionStartOptions): Promise<unknown> {
+  return invoke("production_start", { options });
+}
+
+export async function productionStop(): Promise<unknown> {
+  return invoke("production_stop");
+}
+
+export async function productionStats(): Promise<{ stats: ProductionStats; running: boolean }> {
+  return invoke("production_stats");
+}
+
+export async function productionRecords(): Promise<{ records: ProductionRecord[] }> {
+  return invoke("production_records");
+}
+
+/** 选择固件 / Pack 文件（打开系统文件对话框）。 */
+export async function pickFile(filters?: { name: string; extensions: string[] }[]): Promise<string | null> {
+  const selected = await open({ multiple: false, filters });
+  if (typeof selected === "string") {
+    return selected;
+  }
+  return null;
 }

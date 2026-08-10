@@ -10,3 +10,4 @@ apps/desktop/flash-backend/.venv
 apps/desktop/flash-backend/build/
 __pycache__/
 *.pyc
+apps/desktop/flash-backend/build/
