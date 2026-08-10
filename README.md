@@ -70,12 +70,23 @@ macOS 首次运行：
 
 - 如果提示无法验证开发者，可以右键 BusSpy，选择“打开”，再确认打开。
 - 也可以到“系统设置 -> 隐私与安全性”中允许 BusSpy 运行。
-- 如果仍然无法打开，可以在终端执行：
+- 如果仍然无法打开，可以在终端执行仓库里的一键脚本：
+
+```bash
+chmod +x scripts/macos-trust.sh
+./scripts/macos-trust.sh
+# 或指定应用路径:
+./scripts/macos-trust.sh /Applications/BusSpy.app
+```
+
+也可以直接执行底层命令：
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/BusSpy.app
 xattr -cr /Applications/BusSpy.app
 ```
+
+> 提示：BusSpy 未做代码签名，**每次升级(替换 BusSpy.app)后 macOS 会重新加 quarantine 标记**，所以升级后如果再次提示“无法打开”，重新执行一次上面的命令即可。如果想彻底避免这个问题，需要购买 Apple Developer 账号做签名 + 公证。
 
 Linux 首次运行：
 

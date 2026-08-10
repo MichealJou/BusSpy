@@ -71,7 +71,48 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build and upload release assets
+      # === macOS 路径:只构建不上传 → 重制 dmg 塞入信任脚本 → 手动上传 ===
+      - name: Build (macOS, no upload)
+        if: startsWith(matrix.platform, 'macos')
+        id: tauri-build-macos
+        uses: tauri-apps/tauri-action@v0.6.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tauriScript: pnpm tauri
+          args: ${{ matrix.args }}
+
+      - name: Rebuild macOS dmg with trust script
+        if: startsWith(matrix.platform, 'macos')
+        env:
+          ARTIFACT_PATHS: ${{ steps.tauri-build-macos.outputs.artifactPaths }}
+        run: |
+          # 找到 dmg 产物并重制
+          DMG_PATH="$(printf '%s\n' $ARTIFACT_PATHS | grep '\.dmg$' | head -n1)"
+          if [ -z "$DMG_PATH" ]; then
+            echo "未找到 dmg 产物" >&2
+            exit 1
+          fi
+          echo "原 dmg:$DMG_PATH"
+          bash .github/scripts/rebuild-dmg.sh "$DMG_PATH" scripts/dmg-trust.command
+
+      - name: Upload macOS assets to release
+        if: startsWith(matrix.platform, 'macos')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_PATHS: ${{ steps.tauri-build-macos.outputs.artifactPaths }}
+          TAG: ${{ github.event.release.tag_name || inputs.version || github.ref_name }}
+        run: |
+          # tauri-action 用换行/空格分隔 artifactPaths,这里逐个上传
+          for ARTIFACT in $ARTIFACT_PATHS; do
+            echo "上传:$ARTIFACT"
+            gh release upload "$TAG" "$ARTIFACT" --clobber
+          done
+
+      # === Windows / Linux 路径:一步构建 + 上传(原样) ===
+      - name: Build and upload release assets (Windows/Linux)
+        if: ${{ !startsWith(matrix.platform, 'macos') }}
         uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -87,7 +128,7 @@ jobs:
             下载对应系统的安装包：
 
             - Windows：`.exe` / `.msi`
-            - macOS：`.dmg`
+            - macOS：`.dmg`(已内置"首次运行请双击.command",双击即可去掉未签名提示)
             - Linux：`.AppImage` / `.deb` / `.rpm`
 
             未签名版本首次运行可能需要手动允许，Linux 串口访问可能需要加入 `dialout` 用户组。
