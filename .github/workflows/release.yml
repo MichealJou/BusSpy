@@ -105,6 +105,15 @@ jobs:
           ARTIFACT_PATHS: ${{ steps.tauri-build-macos.outputs.artifactPaths }}
           TAG: ${{ github.event.release.tag_name || inputs.version || github.ref_name }}
         run: |
+          # macOS job 与 Windows/Linux job 并行,release 可能还没被创建。
+          # 先确保 release 存在(不存在则创建),再上传产物。
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "release 不存在,创建 $TAG"
+            gh release create "$TAG" \
+              --title "BusSpy $TAG" \
+              --notes "BusSpy $TAG" \
+              --target "$GITHUB_SHA"
+          fi
           # artifactPaths 是 JSON 数组字符串,用 jq 解析后逐个上传
           echo "$ARTIFACT_PATHS" | jq -r '.[]' | while IFS= read -r ARTIFACT; do
             echo "上传:$ARTIFACT"
