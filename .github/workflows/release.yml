@@ -88,10 +88,11 @@ jobs:
         env:
           ARTIFACT_PATHS: ${{ steps.tauri-build-macos.outputs.artifactPaths }}
         run: |
-          # 找到 dmg 产物并重制
-          DMG_PATH="$(printf '%s\n' $ARTIFACT_PATHS | grep '\.dmg$' | head -n1)"
+          # artifactPaths 是 JSON 数组字符串,如 ["/path/a.dmg","/path/b.app"]
+          # 用 jq 解析出每个路径,找到 .dmg 重制
+          DMG_PATH="$(echo "$ARTIFACT_PATHS" | jq -r '.[]' | grep '\.dmg$' | head -n1)"
           if [ -z "$DMG_PATH" ]; then
-            echo "未找到 dmg 产物" >&2
+            echo "未找到 dmg 产物,artifactPaths=$ARTIFACT_PATHS" >&2
             exit 1
           fi
           echo "原 dmg:$DMG_PATH"
@@ -104,8 +105,8 @@ jobs:
           ARTIFACT_PATHS: ${{ steps.tauri-build-macos.outputs.artifactPaths }}
           TAG: ${{ github.event.release.tag_name || inputs.version || github.ref_name }}
         run: |
-          # tauri-action 用换行/空格分隔 artifactPaths,这里逐个上传
-          for ARTIFACT in $ARTIFACT_PATHS; do
+          # artifactPaths 是 JSON 数组字符串,用 jq 解析后逐个上传
+          echo "$ARTIFACT_PATHS" | jq -r '.[]' | while IFS= read -r ARTIFACT; do
             echo "上传:$ARTIFACT"
             gh release upload "$TAG" "$ARTIFACT" --clobber
           done
