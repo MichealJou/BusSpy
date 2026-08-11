@@ -54,6 +54,7 @@ export function useFlasher(): FlasherStore {
   const [flashLogs, setFlashLogs] = useState<string[]>([]);
   const [chipInfo, setChipInfo] = useState<FlasherStore["chipInfo"]>(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [checking, setChecking] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
@@ -389,11 +390,15 @@ export function useFlasher(): FlasherStore {
 
   // ── 初始化：环境自检 + 器件库 ──────────────────────────
   useEffect(() => {
-    void checkEnvironment().then(() => {
-      if (statusRef.current?.ready) {
-        void Promise.all([refreshProbes(), loadTargets(), loadPacks(), refreshSerialPorts()]);
-      }
-    });
+    void checkEnvironment()
+      .then(() => {
+        if (statusRef.current?.ready) {
+          return Promise.all([refreshProbes(), loadTargets(), loadPacks(), refreshSerialPorts()]).then(() => undefined);
+        }
+        return Promise.resolve();
+      })
+      .catch(() => undefined)
+      .finally(() => setInitializing(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -482,6 +487,7 @@ export function useFlasher(): FlasherStore {
     flashLogs,
     chipInfo,
     loading,
+    initializing,
     checking,
     refreshing,
     bootstrapping,

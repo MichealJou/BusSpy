@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Tabs } from "@mantine/core";
+import { Alert, Group, Loader, Tabs, Text } from "@mantine/core";
 import {
   EnvironmentPanel,
   ProbePanel,
@@ -30,6 +30,14 @@ export function FlasherView() {
       </header>
 
       <main className="workspace flasher-workspace">
+        {flasher.initializing && (
+          <Alert color="blue" variant="light" p="sm" mb={12}>
+            <Group gap={8}>
+              <Loader size={15} />
+              <Text fz={13}>{t("flasherInitializing")}</Text>
+            </Group>
+          </Alert>
+        )}
         <div className="flasher-topbar">
           <EnvironmentPanel state={flasher} />
           <ProbePanel state={flasher} />
