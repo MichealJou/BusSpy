@@ -21,6 +21,15 @@ mod probe_scan;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
+struct AppPaths {
+    /// 器件包（Pack）存储目录
+    pack_dir: String,
+    /// 固件默认打开目录（可配置，默认空）
+    firmware_dir: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SerialPortInfo {
     name: String,
     port_type: String,
@@ -401,6 +410,37 @@ fn delete_command_label(app: AppHandle, id: i64) -> Result<Vec<CommandLabel>, St
         .execute("DELETE FROM command_labels WHERE id = ?1", params![id])
         .map_err(|error| format!("删除命令标签失败：{error}"))?;
     list_command_labels(app)
+}
+
+/// 获取应用存储路径配置：器件包目录（固定）+ 固件默认目录（可配置）。
+#[tauri::command]
+fn get_app_paths(app: AppHandle) -> Result<AppPaths, String> {
+    let connection = open_app_database(&app)?;
+    let firmware_dir = connection
+        .query_row(
+            "SELECT value FROM app_settings WHERE key = 'firmware_dir'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .unwrap_or_default();
+    let pack_dir = crate::pack_downloader::data_dir()
+        .map(|dir| dir.to_string_lossy().to_string())
+        .unwrap_or_default();
+    Ok(AppPaths { pack_dir, firmware_dir })
+}
+
+/// 设置固件默认打开目录（用于固件选择对话框的默认位置）。
+#[tauri::command]
+fn set_firmware_dir(app: AppHandle, dir: String) -> Result<String, String> {
+    let connection = open_app_database(&app)?;
+    connection
+        .execute(
+            "INSERT INTO app_settings(key, value) VALUES ('firmware_dir', ?1)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![dir],
+        )
+        .map_err(|error| format!("保存固件目录失败：{error}"))?;
+    Ok(dir)
 }
 
 #[tauri::command]
@@ -843,6 +883,8 @@ pub fn run() {
             list_command_labels,
             save_command_label,
             delete_command_label,
+            get_app_paths,
+            set_firmware_dir,
             get_app_language,
             set_app_language,
             emit_loopback_data,

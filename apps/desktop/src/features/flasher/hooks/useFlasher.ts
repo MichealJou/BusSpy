@@ -58,12 +58,13 @@ export function useFlasher(): FlasherStore {
   const [serialPorts, setSerialPorts] = useState<string[]>([]);
   const [selectedPort, setSelectedPortState] = useState<string | null>(null);
   const [baudRate, setBaudRate] = useState(115200);
-  const [flashAddress, setFlashAddress] = useState<number | null>(null);
+  const [flashAddress, setFlashAddress] = useState<number | null>(0x08000000);
   const [chipErase, setChipErase] = useState(false);
   const [verifyAfterFlash, setVerifyAfterFlash] = useState(true);
   const [run, setRun] = useState(emptyRun);
   const [flashLogs, setFlashLogs] = useState<string[]>([]);
   const [chipInfo, setChipInfo] = useState<FlasherStore["chipInfo"]>(null);
+  const [chipInfoLoading, setChipInfoLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [checking, setChecking] = useState(false);
@@ -171,6 +172,14 @@ export function useFlasher(): FlasherStore {
       setRefreshing(false);
     }
   }, []);
+
+  // 探针连接后自动读取芯片信息（无需先选器件，按 ID 自动识别）
+  useEffect(() => {
+    if (visibleProbes.length > 0) {
+      void readChipInfo();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleProbes.length]);
 
   // 首次探针扫描为空（后端枚举偶发失败 / 探针刚插入）时自动重试，最多 2 次
   const probeRetries = useRef(0);
@@ -323,17 +332,25 @@ export function useFlasher(): FlasherStore {
   }, [visibleProbes]);
 
   const readChipInfo = useCallback(async () => {
-    const target = selectedRef.current;
     const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
-    if (!target || !probe) {
-      setError("请先选择器件并连接烧录器");
+    if (!probe) {
+      setError("请先连接烧录器");
       return;
     }
     setError(null);
+    setChipInfoLoading(true);
     try {
-      setChipInfo(await flashReadChipInfo(probe.uniqueId || probe.id, target));
+      // 连接即可读取：不传器件时后端按芯片 ID 自动识别型号
+      const info = await flashReadChipInfo(probe.uniqueId || probe.id, selectedRef.current ?? "");
+      setChipInfo(info);
+      // 自动识别的型号：自动填入器件选择（用户可改）
+      if (info.suggestedTarget && !selectedRef.current) {
+        setSelectedTarget(info.suggestedTarget);
+      }
     } catch (err) {
       setError(`读取芯片信息失败：${String(err)}`);
+    } finally {
+      setChipInfoLoading(false);
     }
   }, [visibleProbes]);
 
@@ -552,6 +569,7 @@ export function useFlasher(): FlasherStore {
     run,
     flashLogs,
     chipInfo,
+    chipInfoLoading,
     loading,
     initializing,
     checking,

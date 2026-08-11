@@ -111,6 +111,19 @@ export async function deleteCommandLabel(id: number): Promise<CommandLabel[]> {
   return invoke<CommandLabel[]>("delete_command_label", { id });
 }
 
+export interface AppPaths {
+  packDir: string;
+  firmwareDir: string;
+}
+
+export async function getAppPaths(): Promise<AppPaths> {
+  return invoke("get_app_paths");
+}
+
+export async function setFirmwareDir(dir: string): Promise<string> {
+  return invoke("set_firmware_dir", { dir });
+}
+
 export async function getAppLanguage(): Promise<"zh" | "en"> {
   return invoke<"zh" | "en">("get_app_language");
 }
@@ -238,6 +251,8 @@ export interface FlashChipInfo {
   coreId?: string | null;
   uid: string[];
   target?: string;
+  /** 按芯片 ID 自动识别的 target（连接后未选器件时自动填充） */
+  suggestedTarget?: string | null;
 }
 
 export interface FlashProgressEvent {
@@ -373,9 +388,12 @@ export async function productionRecords(): Promise<{ records: ProductionRecord[]
   return invoke("production_records");
 }
 
-/** 选择固件 / Pack 文件（打开系统文件对话框）。 */
-export async function pickFile(filters?: { name: string; extensions: string[] }[]): Promise<string | null> {
-  const selected = await open({ multiple: false, filters });
+/** 选择固件 / Pack 文件（打开系统文件对话框，可指定默认目录）。 */
+export async function pickFile(
+  filters?: { name: string; extensions: string[] }[],
+  defaultPath?: string,
+): Promise<string | null> {
+  const selected = await open({ multiple: false, filters, defaultPath });
   if (typeof selected === "string") {
     return selected;
   }

@@ -1458,3 +1458,34 @@ textarea {
   border-radius: 0 0 10px 10px;
   box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.06);
 }
+
+/* 单烧：极简单列布局 */
+.program-simple {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+}
+
+.program-simple > .flasher-card {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 烧录卡片内部分区：浅灰背景 + 圆角，层次分明 */
+.prog-section {
+  background: #f4f6fa;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* 分区标题（小字 + 底色，不占太多空间） */
+.prog-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}

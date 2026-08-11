@@ -4,6 +4,7 @@ import { UpdateChecker } from "./components/update/UpdateChecker";
 import { AppSidebar, type ToolId } from "./components/app-shell/AppSidebar";
 import { SerialConsoleView } from "./views/serial-console";
 import { FlasherView } from "./views/flasher";
+import { SettingsView } from "./views/settings/SettingsView";
 
 export function App() {
   const [activeTool, setActiveTool] = useState<ToolId>("serial");
@@ -20,7 +21,7 @@ export function App() {
         <div style={{ display: activeTool === "flasher" ? "contents" : "none" }}>
           <FlasherView />
         </div>
-        {activeTool === "settings" && <main className="workspace">设置页开发中</main>}
+        {activeTool === "settings" && <SettingsView />}
       </div>
     </I18nProvider>
   );

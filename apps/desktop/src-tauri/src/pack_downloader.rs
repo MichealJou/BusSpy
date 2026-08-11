@@ -73,12 +73,31 @@ fn load_index() -> Result<Value, String> {
     Ok(value)
 }
 
-/// 从器件描述符的 memories 中取默认（default=1）的 Flash 大小（KB）。
+/// memory 是否为默认内存（default 字段可能是布尔 true 或字符串 "1"）。
+fn is_default_memory(memory: &Value) -> bool {
+    match memory.get("default") {
+        Some(Value::Bool(true)) => true,
+        Some(Value::String(value)) => value == "1",
+        _ => false,
+    }
+}
+
+/// 从器件描述符的 memories 中取 Flash 大小（KB）。
+/// 优先取名字含 Flash/IROM/ROM 的默认内存，fallback 任意默认内存。
 fn default_flash_kb(descriptor: &Value) -> Option<u64> {
     let memories = descriptor.get("memories")?.as_object()?;
+    for (name, memory) in memories {
+        let name_lower = name.to_lowercase();
+        if (name_lower.contains("flash") || name_lower.contains("irom") || name_lower.contains("rom"))
+            && is_default_memory(memory)
+        {
+            if let Some(size) = memory.get("size").and_then(|value| value.as_u64()) {
+                return Some(size / 1024);
+            }
+        }
+    }
     for memory in memories.values() {
-        let memory = memory.as_object()?;
-        if memory.get("default").and_then(|value| value.as_str()) == Some("1") {
+        if is_default_memory(memory) {
             if let Some(size) = memory.get("size").and_then(|value| value.as_u64()) {
                 return Some(size / 1024);
             }
@@ -87,13 +106,14 @@ fn default_flash_kb(descriptor: &Value) -> Option<u64> {
     None
 }
 
-/// 从器件描述符的 memories 中取 RAM 大小（KB）（IRAM* 段累加）。
+/// 从器件描述符的 memories 中取 RAM 总大小（KB）（SRAM/IRAM/RAM 段累加）。
 fn default_ram_kb(descriptor: &Value) -> Option<u64> {
     let memories = descriptor.get("memories")?.as_object()?;
     let mut total: u64 = 0;
     let mut found = false;
     for (name, memory) in memories {
-        if !name.starts_with("IRAM") {
+        let name_lower = name.to_lowercase();
+        if !(name_lower.contains("ram") || name_lower.contains("sram") || name_lower.contains("iram")) {
             continue;
         }
         if let Some(size) = memory.get("size").and_then(|value| value.as_u64()) {
@@ -743,5 +763,19 @@ mod tests {
             }
         });
         assert_eq!(default_flash_kb(&descriptor), Some(256));
+    }
+
+    #[test]
+    fn flash_ram_parse_real_index_format() {
+        // 真实 index.json 格式：default 是布尔，内存名 Flash/SRAM1
+        let descriptor = json!({
+            "memories": {
+                "SRAM2": { "default": false, "size": 65536 },
+                "Flash": { "default": true, "size": 524288 },
+                "SRAM1": { "default": true, "size": 131072 }
+            }
+        });
+        assert_eq!(default_flash_kb(&descriptor), Some(512));
+        assert_eq!(default_ram_kb(&descriptor), Some(192));
     }
 }
