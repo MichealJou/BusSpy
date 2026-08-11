@@ -1030,6 +1030,64 @@ textarea {
   align-items: stretch;
 }
 
+/* 顶部环境状态条 */
+.env-bar {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.env-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.env-dot-ok {
+  background: #37b24d;
+  box-shadow: 0 0 0 3px rgba(55, 178, 77, 0.18);
+}
+
+.env-dot-bad {
+  background: #e03131;
+  box-shadow: 0 0 0 3px rgba(224, 49, 49, 0.16);
+}
+
+/* 单烧 2×2 布局 */
+.program-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.program-layout .flasher-card {
+  min-height: 0;
+}
+
+.program-layout .flash-action-bar {
+  grid-column: 1 / -1;
+}
+
+.card-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: #f0f5ff;
+  color: var(--blue);
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .flasher-topbar .env-panel,
 .flasher-topbar .probe-panel {
   min-height: 96px;

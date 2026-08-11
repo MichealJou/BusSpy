@@ -13,10 +13,21 @@ import {
   Select,
   Stack,
   Text,
-  ThemeIcon,
-  Tooltip,
 } from "@mantine/core";
-import { CircleCheck, CircleX, CloudDownload, FileUp, FolderOpen, Info, Package, Play, RefreshCw, Trash2, Usb, Zap } from "lucide-react";
+import {
+  CircleCheck,
+  CircleX,
+  CloudDownload,
+  FileUp,
+  FolderOpen,
+  Package,
+  Play,
+  RefreshCw,
+  SlidersHorizontal,
+  Trash2,
+  Usb,
+  Zap,
+} from "lucide-react";
 import { pickFile } from "../../../tauri";
 import { useI18n } from "../../../i18n";
 import type { FlasherStore } from "../lib/types";
@@ -46,15 +57,13 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
   }
 
   async function pickPack() {
-    const path = await pickFile([
-      { name: "CMSIS DFP Pack", extensions: ["pack"] },
-    ]);
+    const path = await pickFile([{ name: "CMSIS DFP Pack", extensions: ["pack"] }]);
     if (path) {
       await state.importPack(path);
     }
   }
 
-  const progressValue = state.run.running ? state.run.pct : 0;
+  const running = state.run.running;
   const phaseLabel =
     state.run.phase === "program"
       ? t("phaseProgram")
@@ -71,7 +80,7 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
                 : "";
 
   return (
-    <div className="flasher-grid program-grid">
+    <div className="program-layout">
       <PackDownloadModal
         opened={packDownloaderOpened}
         onClose={() => setPackDownloaderOpened(false)}
@@ -81,9 +90,10 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
         onLog={state.pushFlashLog}
         state={state}
       />
+
       {/* ① 连接方式 */}
       <section className="flasher-card">
-        <PanelTitle icon={<Usb size={15} />} title={t("connectionMode")} />
+        <CardTitle icon={<Usb size={14} />} title={t("connectionMode")} />
         <SegmentedControl
           fullWidth
           size="xs"
@@ -98,12 +108,12 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
         {state.connectionMode === "swd" ? (
           <Stack gap={6}>
             {probe ? (
-              <Group gap={8}>
+              <Group gap={8} wrap="nowrap">
                 <span className="probe-dot" />
-                <Text fz={13} fw={500}>
+                <Text fz={13} fw={500} className="ellipsis">
                   {probe.product || probe.uniqueId}
                 </Text>
-                <Badge color="green" variant="light" size="xs">
+                <Badge color="green" variant="light" size="xs" style={{ flexShrink: 0 }}>
                   {t("probeConnected")}
                 </Badge>
               </Group>
@@ -112,7 +122,7 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
                 {t("noProbe")}
               </Text>
             )}
-            <Button size="xs" variant="subtle" leftSection={<RefreshCw size={13} />} onClick={() => void state.refreshProbes()}>
+            <Button size="compact-xs" variant="subtle" leftSection={<RefreshCw size={12} />} onClick={() => void state.refreshProbes()} loading={state.refreshing}>
               {t("refresh")}
             </Button>
           </Stack>
@@ -121,24 +131,21 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
             <Select
               size="xs"
               label={t("selectPort")}
-              placeholder={t("selectPort")}
               data={state.serialPorts.map((port) => ({ value: port, label: port }))}
               value={state.selectedPort}
               onChange={(value) => state.setSelectedPort(value ?? null)}
               searchable
             />
-            <Group grow>
-              <Select
-                size="xs"
-                label={t("baudRate")}
-                value={String(state.baudRate)}
-                onChange={(value) => state.setBaudRate(Number(value ?? 115200))}
-                data={["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"].map((rate) => ({
-                  value: rate,
-                  label: rate,
-                }))}
-              />
-            </Group>
+            <Select
+              size="xs"
+              label={t("baudRate")}
+              value={String(state.baudRate)}
+              onChange={(value) => state.setBaudRate(Number(value ?? 115200))}
+              data={["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"].map((rate) => ({
+                value: rate,
+                label: rate,
+              }))}
+            />
             <Text fz={11} c="dimmed">
               {t("ispHint")}
             </Text>
@@ -148,10 +155,9 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
 
       {/* ② 器件 */}
       <section className="flasher-card">
-        <PanelTitle icon={<Zap size={15} />} title={t("device")} />
+        <CardTitle icon={<Zap size={14} />} title={t("device")} />
         <Select
           size="xs"
-          label={t("deviceSearch")}
           placeholder={t("deviceSearch")}
           value={state.selectedTarget}
           onChange={(value) => state.setSelectedTarget(value ?? null)}
@@ -164,40 +170,30 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
           maxDropdownHeight={220}
           nothingFoundMessage={t("noDeviceFound")}
         />
-        <Group gap={8} mt={8}>
-          <Button size="xs" variant="light" leftSection={<CloudDownload size={13} />} onClick={() => setPackDownloaderOpened(true)}>
-            {t("packDownloader")}
+        <Stack gap={6} mt={10}>
+          <Button size="compact-xs" variant="light" leftSection={<CloudDownload size={13} />} onClick={() => setPackDownloaderOpened(true)}>
+            {t("deviceManager")}
           </Button>
-          <Button size="xs" variant="light" leftSection={<Package size={13} />} onClick={() => void pickPack()}>
-            {t("importPack")}
-          </Button>
-          <Tooltip label={t("packListTooltip")}>
+          <Group gap={8}>
+            <Button size="compact-xs" variant="subtle" leftSection={<Package size={13} />} onClick={() => void pickPack()}>
+              {t("importPack")}
+            </Button>
             <Badge variant="default" size="xs">
               {t("installedPacks")}: {state.packs.length}
             </Badge>
-          </Tooltip>
-        </Group>
-        {state.packs.length > 0 && (
-          <Text fz={11} c="dimmed" mt={6}>
-            {state.packs.map((pack) => `${pack.name} v${pack.version}`).join("、")}
-          </Text>
-        )}
+          </Group>
+        </Stack>
       </section>
 
       {/* ③ 固件 */}
       <section className="flasher-card">
-        <PanelTitle icon={<FileUp size={15} />} title={t("firmware")} />
+        <CardTitle icon={<FileUp size={14} />} title={t("firmware")} />
         <Group gap={8}>
-          <Button
-            size="xs"
-            variant="light"
-            leftSection={<FolderOpen size={13} />}
-            onClick={() => void pickFirmware()}
-          >
+          <Button size="compact-xs" variant="light" leftSection={<FolderOpen size={13} />} onClick={() => void pickFirmware()}>
             {t("chooseFile")}
           </Button>
           {state.firmwarePath && (
-            <Badge variant="default" size="xs">
+            <Badge variant="default" size="xs" className="ellipsis" style={{ maxWidth: 180 }}>
               {state.firmwarePath.split(/[\\/]/).pop()}
             </Badge>
           )}
@@ -211,15 +207,10 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
 
       {/* ④ 配置参数 */}
       <section className="flasher-card">
-        <PanelTitle icon={<Info size={15} />} title={t("flashConfig")} />
+        <CardTitle icon={<SlidersHorizontal size={14} />} title={t("flashConfig")} />
         <Stack gap={8}>
-          <Group gap={8}>
-            <Checkbox
-              size="xs"
-              label={t("manualAddress")}
-              checked={addressManual}
-              onChange={(event) => setAddressManual(event.currentTarget.checked)}
-            />
+          <Group gap={8} wrap="nowrap">
+            <Checkbox size="xs" label={t("manualAddress")} checked={addressManual} onChange={(event) => setAddressManual(event.currentTarget.checked)} style={{ whiteSpace: "nowrap" }} />
             {addressManual && (
               <NumberInput
                 size="xs"
@@ -239,30 +230,26 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
         </Stack>
       </section>
 
-      {/* ⑤ 烧录 + 结果 + 芯片信息 */}
-      <section className="flasher-card flash-actions-card">
-        <Group justify="space-between" align="flex-start">
-          <Stack gap={8} style={{ flex: 1 }}>
+      {/* ⑤ 烧录操作（横跨） */}
+      <section className="flasher-card flash-action-bar">
+        <Group justify="space-between" align="flex-start" wrap="nowrap">
+          <Stack gap={8} style={{ flex: 1, minWidth: 0 }}>
             <Group gap={8}>
-              <Button
-                leftSection={<Play size={15} />}
-                onClick={() => void state.flash()}
-                disabled={!canFlash || state.run.running}
-                loading={state.run.running}
-              >
+              <Button leftSection={<Play size={15} />} onClick={() => void state.flash()} disabled={!canFlash || running} loading={running}>
                 {t("startFlash")}
               </Button>
-              <Button variant="light" size="xs" leftSection={<Trash2 size={13} />} onClick={() => void state.erase()} disabled={!canFlash || state.run.running}>
+              <Button variant="light" size="xs" leftSection={<Trash2 size={13} />} onClick={() => void state.erase()} disabled={!canFlash || running}>
                 {t("chipErase")}
               </Button>
-              {state.run.running && <Loader size={16} />}
             </Group>
-            {state.run.running && (
-              <Progress value={progressValue} size="sm" striped animated />
+            {running && (
+              <>
+                <Progress value={state.run.pct} size="sm" striped animated />
+                <Text fz={12} c="dimmed">
+                  {phaseLabel} {state.run.pct}%
+                </Text>
+              </>
             )}
-            <Text fz={12} c="dimmed">
-              {state.run.running ? `${phaseLabel} ${progressValue}%` : ""}
-            </Text>
             {state.run.success === true && (
               <Group gap={6}>
                 <CircleCheck size={16} color="#2f9e44" />
@@ -274,26 +261,26 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
             {state.run.success === false && (
               <Group gap={6}>
                 <CircleX size={16} color="#e03131" />
-                <Text fz={13} c="red.8">
+                <Text fz={13} c="red.8" className="path-break">
                   {state.run.message}
                 </Text>
               </Group>
             )}
           </Stack>
 
-          <Stack gap={6} style={{ minWidth: 180 }}>
+          <Stack gap={4} style={{ minWidth: 190, flexShrink: 0 }}>
             <Group gap={6}>
               <Text fz={12} fw={600}>
                 {t("chipInfo")}
               </Text>
-              <Button size="compact-xs" variant="subtle" onClick={() => void state.readChipInfo()} disabled={!canFlash || state.run.running}>
+              <Button size="compact-xs" variant="subtle" onClick={() => void state.readChipInfo()} disabled={!canFlash || running}>
                 {t("readChipInfo")}
               </Button>
             </Group>
             {state.chipInfo ? (
               <>
-                <Text fz={12}>
-                  {t("device")}: {state.chipInfo.target}
+                <Text fz={12} className="ellipsis">
+                  {state.chipInfo.target}
                 </Text>
                 <Text fz={12}>
                   Flash: {state.chipInfo.flashSize ? `${Math.round(state.chipInfo.flashSize / 1024)} KB` : "-"}
@@ -338,12 +325,10 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
   );
 }
 
-function PanelTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
+function CardTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
     <Group gap={6} mb={10}>
-      <ThemeIcon variant="light" radius="sm" size={22}>
-        {icon}
-      </ThemeIcon>
+      <span className="card-title-icon">{icon}</span>
       <Text fw={600} fz={13}>
         {title}
       </Text>

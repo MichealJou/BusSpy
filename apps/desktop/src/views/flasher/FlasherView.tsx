@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { Alert, Group, Loader, Tabs, Text } from "@mantine/core";
-import {
-  EnvironmentPanel,
-  ProbePanel,
-  ProductionPanel,
-  ProgramPanel,
-  SnToolPanel,
-} from "../../features/flasher/components";
+import { EnvironmentPanel, ProductionPanel, ProgramPanel, SnToolPanel } from "../../features/flasher/components";
 import { useFlasher } from "../../features/flasher/hooks";
 import { useI18n } from "../../i18n";
 
@@ -38,10 +32,7 @@ export function FlasherView() {
             </Group>
           </Alert>
         )}
-        <div className="flasher-topbar">
-          <EnvironmentPanel state={flasher} />
-          <ProbePanel state={flasher} />
-        </div>
+        <EnvironmentPanel state={flasher} />
         {tab === "program" && <ProgramPanel state={flasher} />}
         {tab === "sn" && <SnToolPanel state={flasher} />}
         {tab === "production" && <ProductionPanel state={flasher} />}

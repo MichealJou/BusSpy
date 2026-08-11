@@ -341,7 +341,18 @@ pub fn flash_backend_status(app: AppHandle) -> Result<FlashBackendStatus, String
 
     // 尝试启动并 ping 后端，收集 pyocd/pyserial 状态
     if let Ok(backend) = get_backend(&app) {
-        if let Ok(Value::Object(pong)) = backend.call("ping", Value::Null, BACKEND_TIMEOUT) {
+        // 后端进程冷启动（Python + pyOCD 导入）可能较慢，ping 失败重试几次
+        let mut pong: Option<Value> = None;
+        for attempt in 0..5 {
+            if let Ok(Value::Object(value)) = backend.call("ping", Value::Null, Duration::from_secs(10)) {
+                pong = Some(Value::Object(value));
+                break;
+            }
+            if attempt < 4 {
+                thread::sleep(Duration::from_millis(500 * (attempt as u64 + 1)));
+            }
+        }
+        if let Some(Value::Object(pong)) = pong {
             status.ready = true;
             status.backend_version = pong
                 .get("version")
