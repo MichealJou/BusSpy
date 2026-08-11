@@ -1,5 +1,15 @@
-# BusSpy 烧录器后端依赖
+# BusSpy 烧录器后端依赖（pip install -r requirements.txt）
+# 新增依赖只需在此追加，bootstrap / 打包均自动生效
+
 # 烧录通道 A：SWD 调试器（CMSIS-DAP / ST-Link / J-Link）
 pyocd>=0.36,<1.0
-# 烧录通道 B：串口 ISP（STM32 AN3155 系统 bootloader，S2.5）
+# 烧录通道 B：串口 ISP（STM32 AN3155 系统 bootloader）
 pyserial>=3.5
+
+# pyOCD 显式依赖（Pack 器件库 / HEX 解析 / USB，避免隐式升级变动）
+cmsis-pack-manager>=0.6
+intelhex>=2.3
+pyusb>=1.3
+
+# J-Link 调试器支持（pyOCD 插件，可选但建议安装）
+pylink-square>=0.16

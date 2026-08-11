@@ -30,9 +30,6 @@ pub const PIP_MIRRORS: &[(&str, &str)] = &[
     ("official", "https://pypi.org/simple"),
 ];
 
-/// 烧录后端默认依赖
-const BACKEND_PACKAGES: &str = "pyocd pyserial";
-
 const BACKEND_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Serialize)]
@@ -369,56 +366,75 @@ fn backend_mode(app: &AppHandle) -> String {
     "python3".to_string()
 }
 
-#[tauri::command]
-pub fn flash_backend_status(app: AppHandle) -> Result<FlashBackendStatus, String> {
-    let mut status = FlashBackendStatus {
-        mode: backend_mode(&app),
-        python: String::new(),
-        ready: false,
-        pyocd: None,
-        pyserial: None,
-        backend_version: String::new(),
-        mirrors: PIP_MIRRORS.iter().map(|(name, _)| name.to_string()).collect(),
-    };
-    if let Ok((program, _, _)) = resolve_backend_command(&app) {
-        status.python = program;
-    }
-
-    // 尝试启动并 ping 后端，收集 pyocd/pyserial 状态
-    if let Ok(backend) = get_backend(&app) {
-        // 后端进程冷启动（Python + pyOCD 导入）可能较慢，ping 失败重试几次
-        let mut pong: Option<Value> = None;
-        for attempt in 0..5 {
-            if let Ok(Value::Object(value)) = backend.call("ping", Value::Null, Duration::from_secs(10)) {
-                pong = Some(Value::Object(value));
-                break;
-            }
-            if attempt < 4 {
-                thread::sleep(Duration::from_millis(500 * (attempt as u64 + 1)));
-            }
-        }
-        if let Some(Value::Object(pong)) = pong {
-            status.ready = true;
-            status.backend_version = pong
-                .get("version")
-                .and_then(|value| value.as_str())
-                .unwrap_or("")
-                .to_string();
-        }
-        if let Ok(Value::Object(env_status)) =
-            backend.call("env.status", Value::Null, BACKEND_TIMEOUT)
-        {
-            status.pyocd = env_status.get("pyocd").cloned();
-            status.pyserial = env_status.get("pyserial").cloned();
-        }
-    }
-    Ok(status)
+/// 在 Tauri 的 blocking 线程池中执行阻塞任务。
+///
+/// Tauri v2 的非 async 命令在主线程执行：一个长阻塞命令会冻结整个 UI 并
+/// 阻塞所有其他命令。烧录后端的每次调用都可能耗时数秒到数分钟（探针枚举、
+/// 在线下载等），因此所有命令都必须是 async，并把阻塞调用丢到这里。
+async fn spawn_blocking_task<F, T>(task: F) -> Result<T, String>
+where
+    F: FnOnce() -> Result<T, String> + Send + 'static,
+    T: Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(task)
+        .await
+        .map_err(|error| format!("烧录后端任务执行失败：{error}"))?
 }
 
 #[tauri::command]
-pub fn flash_list_probes(app: AppHandle) -> Result<Vec<FlashProbeInfo>, String> {
-    let backend = get_backend(&app)?;
-    let result = backend.call("probe.list", Value::Null, BACKEND_TIMEOUT)?;
+pub async fn flash_backend_status(app: AppHandle) -> Result<FlashBackendStatus, String> {
+    spawn_blocking_task(move || {
+        let mut status = FlashBackendStatus {
+            mode: backend_mode(&app),
+            python: String::new(),
+            ready: false,
+            pyocd: None,
+            pyserial: None,
+            backend_version: String::new(),
+            mirrors: PIP_MIRRORS.iter().map(|(name, _)| name.to_string()).collect(),
+        };
+        if let Ok((program, _, _)) = resolve_backend_command(&app) {
+            status.python = program;
+        }
+
+        // 尝试启动并 ping 后端，收集 pyocd/pyserial 状态
+        if let Ok(backend) = get_backend(&app) {
+            // 后端进程冷启动（Python + pyOCD 导入）可能较慢，ping 失败重试几次；
+            // 总预算控制在 ~15s，避免环境异常时自检长时间挂起
+            let mut pong: Option<Value> = None;
+            for attempt in 0..3 {
+                if let Ok(Value::Object(value)) =
+                    backend.call("ping", Value::Null, Duration::from_secs(5))
+                {
+                    pong = Some(Value::Object(value));
+                    break;
+                }
+                if attempt < 2 {
+                    thread::sleep(Duration::from_millis(1000));
+                }
+            }
+            if let Some(Value::Object(pong)) = pong {
+                status.ready = true;
+                status.backend_version = pong
+                    .get("version")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("")
+                    .to_string();
+            }
+            if let Ok(Value::Object(env_status)) =
+                backend.call("env.status", Value::Null, Duration::from_secs(15))
+            {
+                status.pyocd = env_status.get("pyocd").cloned();
+                status.pyserial = env_status.get("pyserial").cloned();
+            }
+        }
+        Ok(status)
+    })
+    .await
+}
+
+/// 把后端/rusb 返回的探针 JSON 解析为结构体。
+fn parse_probes(result: &Value) -> Result<Vec<FlashProbeInfo>, String> {
     let probes = result
         .get("probes")
         .and_then(|value| value.as_array())
@@ -448,116 +464,152 @@ pub fn flash_list_probes(app: AppHandle) -> Result<Vec<FlashProbeInfo>, String> 
         .collect()
 }
 
+#[tauri::command]
+pub async fn flash_list_probes(app: AppHandle, _force: Option<bool>) -> Result<Vec<FlashProbeInfo>, String> {
+    spawn_blocking_task(move || {
+        // 优先 Rust 原生 USB 快速识别（毫秒级，不启动 Python 后端，和串口列表一样快）
+        match crate::probe_scan::list_usb_probes() {
+            Ok(result) => parse_probes(&result),
+            Err(usb_error) => {
+                // 系统无 libusb / 权限不足 → 回退 pyOCD 后端枚举
+                let backend = get_backend(&app)?;
+                let result = backend
+                    .call("probe.list", json!({ "force": true }), BACKEND_TIMEOUT)
+                    .map_err(|error| format!("探针扫描失败（{usb_error}；回退 pyOCD 也失败）：{error}"))?;
+                if let Some(error) = result.get("error").and_then(|value| value.as_str()) {
+                    if !error.is_empty() {
+                        return Err(format!("探针扫描失败：{error}"));
+                    }
+                }
+                if result.get("timeout").and_then(|value| value.as_bool()).unwrap_or(false) {
+                    return Err("探针扫描超时（10s），请检查调试器连接后重试".to_string());
+                }
+                parse_probes(&result)
+            }
+        }
+    })
+    .await
+}
+
 /// 自动初始化后端环境：创建 venv + 从（国内）镜像安装 pyocd/pyserial。
 ///
 /// 该命令立即返回，安装过程在后台线程执行，通过事件推送到前端：
 ///   - "flash-bootstrap-log"   （String，安装日志行）
 ///   - "flash-bootstrap-done"  （{ success, message }）
 #[tauri::command]
-pub fn flash_bootstrap(app: AppHandle, mirror: Option<String>) -> Result<(), String> {
-    let mirror = mirror.unwrap_or_else(|| "tuna".to_string());
-    let index_url = PIP_MIRRORS
-        .iter()
-        .find(|(name, _)| name == &mirror)
-        .map(|(_, url)| url.to_string())
-        .ok_or_else(|| format!("不支持的镜像：{mirror}"))?;
+pub async fn flash_bootstrap(app: AppHandle, mirror: Option<String>) -> Result<(), String> {
+    spawn_blocking_task(move || {
+        let mirror = mirror.unwrap_or_else(|| "tuna".to_string());
+        let index_url = PIP_MIRRORS
+            .iter()
+            .find(|(name, _)| name == &mirror)
+            .map(|(_, url)| url.to_string())
+            .ok_or_else(|| format!("不支持的镜像：{mirror}"))?;
 
-    let backend_dir_path = backend_dir();
-    let venv_path = venv_python(&backend_dir_path);
-    let venv_dir = venv_path.parent().unwrap_or(&backend_dir_path).to_path_buf();
-    // 创建 venv 的 Python：用候选白名单（避免 macOS 系统自带 3.9）
-    let python = find_python()
-        .map(|path| path.to_string_lossy().to_string())
-        .unwrap_or_else(|| "python3".to_string());
+        let backend_dir_path = backend_dir();
+        let venv_path = venv_python(&backend_dir_path);
+        let venv_dir = venv_path.parent().unwrap_or(&backend_dir_path).to_path_buf();
+        // 创建 venv 的 Python：用候选白名单（避免 macOS 系统自带 3.9）
+        let python = find_python()
+            .map(|path| path.to_string_lossy().to_string())
+            .unwrap_or_else(|| "python3".to_string());
 
-    thread::spawn(move || {
-        let emit_log = |line: &str| {
-            let _ = app.emit("flash-bootstrap-log", line);
-        };
-        emit_log(&format!("[1/3] 创建虚拟环境：{venv_dir:?}"));
-        let venv_result = Command::new(&python)
-            .args(["-m", "venv"])
-            .arg(&venv_dir)
-            .output();
-        match venv_result {
-            Ok(output) if output.status.success() => {}
-            Ok(output) => {
-                let message = String::from_utf8_lossy(&output.stderr).to_string();
-                let _ = app.emit(
-                    "flash-bootstrap-done",
-                    json!({ "success": false, "message": format!("创建虚拟环境失败：{message}") }),
-                );
-                return;
+        thread::spawn(move || {
+            let emit_log = |line: &str| {
+                let _ = app.emit("flash-bootstrap-log", line);
+            };
+            emit_log(&format!("[1/3] 创建虚拟环境：{venv_dir:?}"));
+            let venv_result = Command::new(&python)
+                .args(["-m", "venv"])
+                .arg(&venv_dir)
+                .output();
+            match venv_result {
+                Ok(output) if output.status.success() => {}
+                Ok(output) => {
+                    let message = String::from_utf8_lossy(&output.stderr).to_string();
+                    let _ = app.emit(
+                        "flash-bootstrap-done",
+                        json!({ "success": false, "message": format!("创建虚拟环境失败：{message}") }),
+                    );
+                    return;
+                }
+                Err(error) => {
+                    let _ = app.emit(
+                        "flash-bootstrap-done",
+                        json!({ "success": false, "message": format!("创建虚拟环境失败：{error}") }),
+                    );
+                    return;
+                }
             }
-            Err(error) => {
-                let _ = app.emit(
-                    "flash-bootstrap-done",
-                    json!({ "success": false, "message": format!("创建虚拟环境失败：{error}") }),
-                );
-                return;
-            }
-        }
 
-        emit_log(&format!("[2/3] 使用镜像安装依赖：{index_url}"));
+            emit_log(&format!("[2/3] 使用镜像安装依赖：{index_url}"));
 
-        // 镜像源是 HTTP 直连/自签证书，系统 Python 可能缺 CA 证书导致 SSL 校验失败，
-        // 对镜像主机显式加 --trusted-host 跳过校验（仅用于安装依赖这一环）。
-        let mut install_args = vec!["install".to_string(), "--index-url".to_string(), index_url.clone()];
-        let mirror_host = index_url
-            .trim_start_matches("https://")
-            .trim_start_matches("http://")
-            .split('/')
-            .next()
-            .unwrap_or("")
-            .to_string();
-        if !mirror_host.is_empty() && mirror != "official" {
-            install_args.push("--trusted-host".to_string());
-            install_args.push(mirror_host);
-        }
-        install_args.push(BACKEND_PACKAGES.to_string());
+            // 镜像源是 HTTP 直连/自签证书，系统 Python 可能缺 CA 证书导致 SSL 校验失败，
+            // 对镜像主机显式加 --trusted-host 跳过校验（仅用于安装依赖这一环）。
+            let mut install_args = vec!["install".to_string(), "--index-url".to_string(), index_url.clone()];
+            let mirror_host = index_url
+                .trim_start_matches("https://")
+                .trim_start_matches("http://")
+                .split('/')
+                .next()
+                .unwrap_or("")
+                .to_string();
+            if !mirror_host.is_empty() && mirror != "official" {
+                install_args.push("--trusted-host".to_string());
+                install_args.push(mirror_host);
+            }
+            // 按 requirements.txt 安装：新增依赖只需改后端目录里的清单文件，无需改代码
+            let requirements_path = backend_dir_path.join("requirements.txt");
+            install_args.push("-r".to_string());
+            install_args.push(requirements_path.to_string_lossy().to_string());
 
-        let pip = venv_path
-            .parent()
-            .map(|dir| dir.join(if cfg!(windows) { "pip.exe" } else { "pip" }))
-            .unwrap_or_else(|| venv_path.clone());
-        let install_result = Command::new(&pip).args(&install_args).output();
-        match install_result {
-            Ok(output) if output.status.success() => {
-                emit_log("[3/3] 环境初始化完成");
-                let _ = app.emit(
-                    "flash-bootstrap-done",
-                    json!({ "success": true, "message": "环境初始化完成" }),
-                );
+            let pip = venv_path
+                .parent()
+                .map(|dir| dir.join(if cfg!(windows) { "pip.exe" } else { "pip" }))
+                .unwrap_or_else(|| venv_path.clone());
+            let install_result = Command::new(&pip).args(&install_args).output();
+            match install_result {
+                Ok(output) if output.status.success() => {
+                    emit_log("[3/3] 环境初始化完成");
+                    let _ = app.emit(
+                        "flash-bootstrap-done",
+                        json!({ "success": true, "message": "环境初始化完成" }),
+                    );
+                }
+                Ok(output) => {
+                    let message = String::from_utf8_lossy(&output.stderr).to_string();
+                    let _ = app.emit(
+                        "flash-bootstrap-done",
+                        json!({ "success": false, "message": format!("安装依赖失败：{message}") }),
+                    );
+                }
+                Err(error) => {
+                    let _ = app.emit(
+                        "flash-bootstrap-done",
+                        json!({ "success": false, "message": format!("安装依赖失败：{error}") }),
+                    );
+                }
             }
-            Ok(output) => {
-                let message = String::from_utf8_lossy(&output.stderr).to_string();
-                let _ = app.emit(
-                    "flash-bootstrap-done",
-                    json!({ "success": false, "message": format!("安装依赖失败：{message}") }),
-                );
-            }
-            Err(error) => {
-                let _ = app.emit(
-                    "flash-bootstrap-done",
-                    json!({ "success": false, "message": format!("安装依赖失败：{error}") }),
-                );
-            }
-        }
-    });
-    Ok(())
+        });
+        Ok(())
+    })
+    .await
 }
 
 /// 关闭并重建后端（用于环境初始化完成后切换 venv 解释器）。
 #[tauri::command]
-pub fn flash_backend_restart(app: AppHandle) -> Result<(), String> {
-    let state = app.state::<FlasherState>();
-    let mut guard = state
-        .backend
-        .lock()
-        .map_err(|_| "烧录后端状态锁已损坏".to_string())?;
-    *guard = None;
-    let _ = get_backend(&app)?;
-    Ok(())
+pub async fn flash_backend_restart(app: AppHandle) -> Result<(), String> {
+    spawn_blocking_task(move || {
+        let state = app.state::<FlasherState>();
+        let mut guard = state
+            .backend
+            .lock()
+            .map_err(|_| "烧录后端状态锁已损坏".to_string())?;
+        *guard = None;
+        let _ = get_backend(&app)?;
+        Ok(())
+    })
+    .await
 }
 
 // ── 器件 / Pack ─────────────────────────────────────────
@@ -574,26 +626,29 @@ pub struct FlashTargetInfo {
 }
 
 #[tauri::command]
-pub fn flash_list_targets(app: AppHandle) -> Result<Vec<FlashTargetInfo>, String> {
-    let backend = get_backend(&app)?;
-    let result = backend.call("target.list", Value::Null, BACKEND_TIMEOUT)?;
-    let targets = result
-        .get("targets")
-        .and_then(|value| value.as_array())
-        .ok_or_else(|| "器件列表格式错误".to_string())?;
-    targets
-        .iter()
-        .map(|item| {
-            Ok(FlashTargetInfo {
-                name: item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                target: item.get("target").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                family: item.get("family").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                flash_kb: item.get("flashKb").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-                ram_kb: item.get("ramKb").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-                builtin: item.get("builtin").and_then(|v| v.as_bool()).unwrap_or(false),
+pub async fn flash_list_targets(app: AppHandle) -> Result<Vec<FlashTargetInfo>, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        let result = backend.call("target.list", Value::Null, BACKEND_TIMEOUT)?;
+        let targets = result
+            .get("targets")
+            .and_then(|value| value.as_array())
+            .ok_or_else(|| "器件列表格式错误".to_string())?;
+        targets
+            .iter()
+            .map(|item| {
+                Ok(FlashTargetInfo {
+                    name: item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    target: item.get("target").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    family: item.get("family").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    flash_kb: item.get("flashKb").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                    ram_kb: item.get("ramKb").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                    builtin: item.get("builtin").and_then(|v| v.as_bool()).unwrap_or(false),
+                })
             })
-        })
-        .collect()
+            .collect()
+    })
+    .await
 }
 
 #[derive(Serialize)]
@@ -605,44 +660,66 @@ pub struct FlashPackInfo {
 }
 
 #[tauri::command]
-pub fn flash_list_packs(app: AppHandle) -> Result<Vec<FlashPackInfo>, String> {
-    let backend = get_backend(&app)?;
-    let result = backend.call("pack.list", Value::Null, BACKEND_TIMEOUT)?;
-    let packs = result
-        .get("packs")
-        .and_then(|value| value.as_array())
-        .ok_or_else(|| "Pack 列表格式错误".to_string())?;
-    packs
-        .iter()
-        .map(|item| {
-            Ok(FlashPackInfo {
-                name: item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                version: item.get("version").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                device_count: item.get("deviceCount").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+pub async fn flash_list_packs(app: AppHandle) -> Result<Vec<FlashPackInfo>, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        let result = backend.call("pack.list", Value::Null, BACKEND_TIMEOUT)?;
+        // 顺带缓存 cmsis-pack-manager 数据目录，供 Rust 下载器（pack_downloader）复用
+        if let Some(path) = result
+            .get("dataPath")
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.is_empty())
+        {
+            crate::pack_downloader::set_data_dir(std::path::PathBuf::from(path));
+        }
+        let packs = result
+            .get("packs")
+            .and_then(|value| value.as_array())
+            .ok_or_else(|| "Pack 列表格式错误".to_string())?;
+        packs
+            .iter()
+            .map(|item| {
+                Ok(FlashPackInfo {
+                    name: item.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    version: item.get("version").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                    device_count: item.get("deviceCount").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                })
             })
-        })
-        .collect()
+            .collect()
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn flash_import_pack(app: AppHandle, pack_path: String) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    let params = json!({ "path": pack_path });
-    backend.call("pack.import", params, Duration::from_secs(600))
+pub async fn flash_import_pack(app: AppHandle, pack_path: String) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        let params = json!({ "path": pack_path });
+        backend.call("pack.import", params, Duration::from_secs(600))
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn flash_search_packs(app: AppHandle, query: String) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    let params = json!({ "query": query });
-    backend.call("pack.search", params, Duration::from_secs(60))
+pub async fn flash_search_packs(_app: AppHandle, query: String) -> Result<Value, String> {
+    spawn_blocking_task(move || crate::pack_downloader::search(&query)).await
+}
+
+/// 器件包分类清单（Keil 风格层级：STM32 / 51 / GD32 / 其他厂商 → Pack）。
+#[tauri::command]
+pub async fn flash_list_pack_categories(_app: AppHandle) -> Result<Value, String> {
+    spawn_blocking_task(crate::pack_downloader::list_all).await
+}
+
+/// 器件树（Keil Devices 风格：厂商 → 系列 → 器件），供下载器左侧导航。
+#[tauri::command]
+pub async fn flash_device_tree(_app: AppHandle) -> Result<Value, String> {
+    spawn_blocking_task(crate::pack_downloader::device_tree).await
 }
 
 #[tauri::command]
-pub fn flash_download_pack(app: AppHandle, pack: String) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    let params = json!({ "pack": pack });
-    backend.call("pack.download", params, Duration::from_secs(600))
+pub async fn flash_download_pack(app: AppHandle, pack: String) -> Result<Value, String> {
+    spawn_blocking_task(move || crate::pack_downloader::download(&app, &pack)).await
 }
 
 // ── 烧录 / 芯片信息 / SN ────────────────────────────────
@@ -660,42 +737,61 @@ pub struct FlashProgramOptions {
 }
 
 #[tauri::command]
-pub fn flash_program(app: AppHandle, options: FlashProgramOptions) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    let mut params = json!({
-        "probeId": options.probe_id,
-        "target": options.target,
-        "filePath": options.file_path,
-        "eraseMode": options.erase_mode,
-        "verify": options.verify,
-    });
-    if let Some(pack) = options.pack {
-        params["pack"] = json!(pack);
-    }
-    if let Some(address) = options.address {
-        params["address"] = json!(address);
-    }
-    backend.call("flash.program", params, Duration::from_secs(600))
+pub async fn flash_program(app: AppHandle, options: FlashProgramOptions) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        let mut params = json!({
+            "probeId": options.probe_id,
+            "target": options.target,
+            "filePath": options.file_path,
+            "eraseMode": options.erase_mode,
+            "verify": options.verify,
+        });
+        if let Some(pack) = options.pack {
+            params["pack"] = json!(pack);
+        }
+        if let Some(address) = options.address {
+            params["address"] = json!(address);
+        }
+        backend.call("flash.program", params, Duration::from_secs(600))
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn flash_erase(app: AppHandle, probe_id: String, target: String, pack: Option<String>) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    let mut params = json!({ "probeId": probe_id, "target": target });
-    if let Some(pack) = pack {
-        params["pack"] = json!(pack);
-    }
-    backend.call("flash.erase", params, Duration::from_secs(300))
+pub async fn flash_erase(
+    app: AppHandle,
+    probe_id: String,
+    target: String,
+    pack: Option<String>,
+) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        let mut params = json!({ "probeId": probe_id, "target": target });
+        if let Some(pack) = pack {
+            params["pack"] = json!(pack);
+        }
+        backend.call("flash.erase", params, Duration::from_secs(300))
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn flash_read_chip_info(app: AppHandle, probe_id: String, target: String, pack: Option<String>) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    let mut params = json!({ "probeId": probe_id, "target": target });
-    if let Some(pack) = pack {
-        params["pack"] = json!(pack);
-    }
-    backend.call("flash.chipInfo", params, BACKEND_TIMEOUT)
+pub async fn flash_read_chip_info(
+    app: AppHandle,
+    probe_id: String,
+    target: String,
+    pack: Option<String>,
+) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        let mut params = json!({ "probeId": probe_id, "target": target });
+        if let Some(pack) = pack {
+            params["pack"] = json!(pack);
+        }
+        backend.call("flash.chipInfo", params, BACKEND_TIMEOUT)
+    })
+    .await
 }
 
 #[derive(Deserialize)]
@@ -727,15 +823,21 @@ fn sn_params(options: &SnOptions) -> Value {
 }
 
 #[tauri::command]
-pub fn flash_read_sn(app: AppHandle, options: SnOptions) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    backend.call("sn.read", sn_params(&options), BACKEND_TIMEOUT)
+pub async fn flash_read_sn(app: AppHandle, options: SnOptions) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        backend.call("sn.read", sn_params(&options), BACKEND_TIMEOUT)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn flash_write_sn(app: AppHandle, options: SnOptions) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    backend.call("sn.write", sn_params(&options), Duration::from_secs(300))
+pub async fn flash_write_sn(app: AppHandle, options: SnOptions) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        backend.call("sn.write", sn_params(&options), Duration::from_secs(300))
+    })
+    .await
 }
 
 // ── 串口 ISP ────────────────────────────────────────────
@@ -751,16 +853,19 @@ pub struct IspProgramOptions {
 }
 
 #[tauri::command]
-pub fn isp_program(app: AppHandle, options: IspProgramOptions) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    let params = json!({
-        "port": options.port,
-        "baudRate": options.baud_rate,
-        "filePath": options.file_path,
-        "address": options.address,
-        "verify": options.verify,
-    });
-    backend.call("isp.program", params, Duration::from_secs(600))
+pub async fn isp_program(app: AppHandle, options: IspProgramOptions) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        let params = json!({
+            "port": options.port,
+            "baudRate": options.baud_rate,
+            "filePath": options.file_path,
+            "address": options.address,
+            "verify": options.verify,
+        });
+        backend.call("isp.program", params, Duration::from_secs(600))
+    })
+    .await
 }
 
 // ── 量产模式 ────────────────────────────────────────────
@@ -785,41 +890,53 @@ pub struct ProductionStartOptions {
 }
 
 #[tauri::command]
-pub fn production_start(app: AppHandle, options: ProductionStartOptions) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    let params = json!({
-        "target": options.target,
-        "firmwarePath": options.firmware_path,
-        "eraseMode": options.erase_mode.clone().unwrap_or_else(|| "auto".to_string()),
-        "verify": options.verify.unwrap_or(true),
-        "pack": options.pack.clone(),
-        "snEnabled": options.sn_enabled.unwrap_or(false),
-        "snAddress": options.sn_address.unwrap_or(0),
-        "snFormat": options.sn_format.clone().unwrap_or_else(|| "ascii".to_string()),
-        "snLength": options.sn_length,
-        "snChecksum": options.sn_checksum.clone().unwrap_or_else(|| "none".to_string()),
-        "snEndian": options.sn_endian.clone().unwrap_or_else(|| "little".to_string()),
-        "snStart": options.sn_start.unwrap_or(1),
-        "snStep": options.sn_step.unwrap_or(1),
-        "snPrefix": options.sn_prefix.clone().unwrap_or_default(),
-    });
-    backend.call("production.start", params, BACKEND_TIMEOUT)
+pub async fn production_start(app: AppHandle, options: ProductionStartOptions) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        let params = json!({
+            "target": options.target,
+            "firmwarePath": options.firmware_path,
+            "eraseMode": options.erase_mode.clone().unwrap_or_else(|| "auto".to_string()),
+            "verify": options.verify.unwrap_or(true),
+            "pack": options.pack.clone(),
+            "snEnabled": options.sn_enabled.unwrap_or(false),
+            "snAddress": options.sn_address.unwrap_or(0),
+            "snFormat": options.sn_format.clone().unwrap_or_else(|| "ascii".to_string()),
+            "snLength": options.sn_length,
+            "snChecksum": options.sn_checksum.clone().unwrap_or_else(|| "none".to_string()),
+            "snEndian": options.sn_endian.clone().unwrap_or_else(|| "little".to_string()),
+            "snStart": options.sn_start.unwrap_or(1),
+            "snStep": options.sn_step.unwrap_or(1),
+            "snPrefix": options.sn_prefix.clone().unwrap_or_default(),
+        });
+        backend.call("production.start", params, BACKEND_TIMEOUT)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn production_stop(app: AppHandle) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    backend.call("production.stop", Value::Null, BACKEND_TIMEOUT)
+pub async fn production_stop(app: AppHandle) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        backend.call("production.stop", Value::Null, BACKEND_TIMEOUT)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn production_stats(app: AppHandle) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    backend.call("production.stats", Value::Null, BACKEND_TIMEOUT)
+pub async fn production_stats(app: AppHandle) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        backend.call("production.stats", Value::Null, BACKEND_TIMEOUT)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn production_records(app: AppHandle) -> Result<Value, String> {
-    let backend = get_backend(&app)?;
-    backend.call("production.records", Value::Null, BACKEND_TIMEOUT)
+pub async fn production_records(app: AppHandle) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        backend.call("production.records", Value::Null, BACKEND_TIMEOUT)
+    })
+    .await
 }

@@ -16,6 +16,8 @@ use rusqlite::{params, Connection};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 mod flasher;
+mod pack_downloader;
+mod probe_scan;
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -852,6 +854,8 @@ pub fn run() {
             flasher::flash_list_packs,
             flasher::flash_import_pack,
             flasher::flash_search_packs,
+            flasher::flash_list_pack_categories,
+            flasher::flash_device_tree,
             flasher::flash_download_pack,
             flasher::flash_program,
             flasher::flash_erase,

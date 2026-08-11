@@ -14,7 +14,12 @@ export function App() {
       <div className="app-shell">
         <AppSidebar activeTool={activeTool} onChange={setActiveTool} />
         {activeTool === "serial" && <SerialConsoleView />}
-        {activeTool === "flasher" && <FlasherView />}
+        {/* FlasherView 常驻渲染：display:contents 保持 grid 子节点布局，
+            隐藏时仅视觉隐藏。这样环境自检/器件/Pack 只在首次进入烧录页初始化一次，
+            切走再切回不重复检测、不丢已选器件/固件。 */}
+        <div style={{ display: activeTool === "flasher" ? "contents" : "none" }}>
+          <FlasherView />
+        </div>
         {activeTool === "settings" && <main className="workspace">设置页开发中</main>}
       </div>
     </I18nProvider>

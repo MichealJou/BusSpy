@@ -51,14 +51,18 @@ def _index_pack_name(cache, vendor: str, pack: str) -> str | None:
 
 
 def list_packs(_params: dict[str, Any] | None = None) -> dict[str, Any]:
-    """列出已安装的 Pack（名称 + 版本 + 支持的器件数）。"""
+    """列出已安装的 Pack（名称 + 版本 + 支持的器件数）。
+
+    dataPath 供 Rust 下载器复用：搜索/下载已迁到 Rust（pack_downloader），
+    但索引与数据目录由 cmsis-pack-manager 维护，这里把目录报给 Rust 缓存。
+    """
     try:
         cache = _cache()
         _ensure_index(cache)
         installed = _installed_pack_files(cache)
     except Exception as exc:  # noqa: BLE001
         return {"packs": [], "error": str(exc)}
-    return {"packs": installed}
+    return {"packs": installed, "dataPath": cache.data_path}
 
 
 def _installed_pack_files(cache) -> list[dict[str, Any]]:

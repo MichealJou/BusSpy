@@ -11,6 +11,9 @@ import type {
 
 export type ConnectionMode = "swd" | "isp";
 
+/** 调试器类型筛选：自动识别全部，或按类型过滤 */
+export type ProbeType = "auto" | "cmsis-dap" | "stlink" | "jlink";
+
 export type SnFormat = "ascii" | "bcd" | "uint32" | "uint64";
 export type SnChecksum = "none" | "crc16" | "crc32";
 
@@ -58,6 +61,10 @@ export interface FlasherState {
   firmwarePath: string | null;
   /** 连接方式：SWD 烧录器 / 串口 ISP */
   connectionMode: ConnectionMode;
+  /** 调试器类型筛选 */
+  probeType: ProbeType;
+  /** 按 probeType 过滤后的探针列表 */
+  visibleProbes: FlashProbeInfo[];
   /** 串口列表（ISP 用） */
   serialPorts: string[];
   /** 已选串口（ISP 用） */
@@ -110,6 +117,7 @@ export interface FlasherActions {
   setSelectedTarget: (target: string | null) => void;
   setFirmwarePath: (path: string | null) => void;
   setConnectionMode: (mode: ConnectionMode) => void;
+  setProbeType: (type: ProbeType) => void;
   setSelectedPort: (port: string | null) => void;
   setBaudRate: (rate: number) => void;
   setFlashAddress: (address: number | null) => void;

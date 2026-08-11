@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  ActionIcon,
   Alert,
   Badge,
   Button,
   Checkbox,
+  Divider,
   Group,
   Loader,
   NumberInput,
@@ -13,13 +15,17 @@ import {
   Select,
   Stack,
   Text,
+  Tooltip,
 } from "@mantine/core";
 import {
+  Check,
   CircleCheck,
   CircleX,
   CloudDownload,
+  Cpu,
   FileUp,
   FolderOpen,
+  Info,
   Package,
   Play,
   RefreshCw,
@@ -30,21 +36,59 @@ import {
 } from "lucide-react";
 import { pickFile } from "../../../tauri";
 import { useI18n } from "../../../i18n";
-import type { FlasherStore } from "../lib/types";
+import type { FlasherStore, ProbeType } from "../lib/types";
 import { PackDownloadModal } from "./PackDownloadModal";
 
 interface ProgramPanelProps {
   state: FlasherStore;
 }
 
+/** 单烧页：Keil uVision 风格（顶部连接栏 + 左侧配置 + 中间烧录区 + 底部输出日志） */
 export function ProgramPanel({ state }: ProgramPanelProps) {
   const { t } = useI18n();
   const [addressManual, setAddressManual] = useState(false);
   const [packDownloaderOpened, setPackDownloaderOpened] = useState(false);
 
   const envReady = Boolean(state.status?.ready);
-  const probe = state.probes.find((item) => item.uniqueId) ?? state.probes[0];
+  const probe = state.visibleProbes.find((item) => item.uniqueId) ?? state.visibleProbes[0];
   const canFlash = envReady && Boolean(state.selectedTarget) && Boolean(state.firmwarePath);
+  // 读取芯片信息 / 整片擦除只需探针 + 器件，不需要固件文件
+  const canChip = envReady && Boolean(state.selectedTarget) && Boolean(probe);
+  const running = state.run.running;
+
+  // 器件下拉选项（Mantine Select 显式分组：{group, items}，避免 data 更新时分组转换崩溃）
+  const deviceOptions = useMemo(() => {
+    const groups = new Map<string, { value: string; label: string }[]>();
+    for (const item of state.targets) {
+      const family = item.family || "其他";
+      if (!groups.has(family)) {
+        groups.set(family, []);
+      }
+      groups.get(family)!.push({
+        value: item.target,
+        label: item.builtin
+          ? `${item.name} · ${item.flashKb}KB ${t("deviceBuiltin")}`
+          : `${item.name} · ${item.flashKb}KB ${t("deviceDfp")}`,
+      });
+    }
+    return Array.from(groups.entries()).map(([group, items]) => ({ group, items }));
+  }, [state.targets]);
+  const isSwd = state.connectionMode === "swd";
+
+  const phaseLabel =
+    state.run.phase === "program"
+      ? t("phaseProgram")
+      : state.run.phase === "erase"
+        ? t("phaseErase")
+        : state.run.phase === "connecting"
+          ? t("phaseConnecting")
+          : state.run.phase === "verify"
+            ? t("phaseVerify")
+            : state.run.phase === "done"
+              ? t("phaseDone")
+              : state.run.phase === "error"
+                ? t("phaseError")
+                : "";
 
   async function pickFirmware() {
     const path = await pickFile([
@@ -63,22 +107,6 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
     }
   }
 
-  const running = state.run.running;
-  const phaseLabel =
-    state.run.phase === "program"
-      ? t("phaseProgram")
-      : state.run.phase === "erase"
-        ? t("phaseErase")
-        : state.run.phase === "connecting"
-          ? t("phaseConnecting")
-          : state.run.phase === "verify"
-            ? t("phaseVerify")
-            : state.run.phase === "done"
-              ? t("phaseDone")
-              : state.run.phase === "error"
-                ? t("phaseError")
-                : "";
-
   return (
     <div className="program-layout">
       <PackDownloadModal
@@ -91,124 +119,169 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
         state={state}
       />
 
-      {/* ① 连接方式 */}
-      <section className="flasher-card">
-        <CardTitle icon={<Usb size={14} />} title={t("connectionMode")} />
-        <SegmentedControl
-          fullWidth
-          size="xs"
-          mb={10}
-          value={state.connectionMode}
-          onChange={(value) => state.setConnectionMode(value as "swd" | "isp")}
-          data={[
-            { label: `SWD ${t("probeMode")}`, value: "swd" },
-            { label: t("serialIsp"), value: "isp" },
-          ]}
-        />
-        {state.connectionMode === "swd" ? (
-          <Stack gap={6}>
-            {probe ? (
-              <Group gap={8} wrap="nowrap">
-                <span className="probe-dot" />
-                <Text fz={13} fw={500} className="ellipsis">
-                  {probe.product || probe.uniqueId}
-                </Text>
-                <Badge color="green" variant="light" size="xs" style={{ flexShrink: 0 }}>
-                  {t("probeConnected")}
-                </Badge>
-              </Group>
+      {/* ── 顶部连接栏 ── */}
+      <section className="flasher-card flash-connect-bar">
+        <Stack gap={10}>
+          <Group gap={12} align="flex-end" wrap="wrap">
+            <SegmentedControl
+              size="xs"
+              value={state.connectionMode}
+              onChange={(value) => state.setConnectionMode(value as "swd" | "isp")}
+              data={[
+                { label: `SWD ${t("probeMode")}`, value: "swd" },
+                { label: t("serialIsp"), value: "isp" },
+              ]}
+            />
+            {isSwd ? (
+              <>
+                <Select
+                  style={{ width: 118, flexShrink: 0 }}
+                  size="xs"
+                  label={t("probeTypeLabel")}
+                  value={state.probeType}
+                  onChange={(value) => state.setProbeType((value as ProbeType) ?? "auto")}
+                  data={[
+                    { value: "auto", label: t("probeTypeAuto") },
+                    { value: "cmsis-dap", label: t("probeTypeCmsisDap") },
+                    { value: "stlink", label: t("probeTypeStlink") },
+                    { value: "jlink", label: t("probeTypeJlink") },
+                  ]}
+                  allowDeselect={false}
+                />
+                <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
+                  {state.refreshing ? (
+                    <Group gap={6} justify="center">
+                      <Loader size={13} />
+                      <Text fz={12} c="dimmed">
+                        {t("probeScanning")}
+                      </Text>
+                    </Group>
+                  ) : probe ? (
+                    <Group gap={8} justify="center" wrap="nowrap">
+                      <span className="probe-dot" />
+                      <Text fz={13} fw={500} className="ellipsis">
+                        {probe.product || probe.uniqueId}
+                      </Text>
+                    </Group>
+                  ) : state.probeType !== "auto" ? (
+                    <Text fz={12} c="dimmed" ta="center">
+                      {t("probeTypeNone")}
+                    </Text>
+                  ) : (
+                    <Text fz={12} c="dimmed" ta="center">
+                      {t("probeGuide")}
+                    </Text>
+                  )}
+                </Stack>
+                <Button size="compact-xs" variant="subtle" leftSection={<RefreshCw size={12} />} onClick={() => void state.refreshProbes()} loading={state.refreshing} style={{ flexShrink: 0 }}>
+                  {t("refresh")}
+                </Button>
+              </>
             ) : (
-              <Text fz={12} c="dimmed">
-                {t("noProbe")}
-              </Text>
+              <>
+                <Select
+                  style={{ width: 190, flexShrink: 0 }}
+                  size="xs"
+                  label={t("selectPort")}
+                  data={state.serialPorts.map((port) => ({ value: port, label: port }))}
+                  value={state.selectedPort}
+                  onChange={(value) => state.setSelectedPort(value ?? null)}
+                  searchable
+                />
+                <Select
+                  style={{ width: 100, flexShrink: 0 }}
+                  size="xs"
+                  label={t("baudRate")}
+                  value={String(state.baudRate)}
+                  onChange={(value) => state.setBaudRate(Number(value ?? 115200))}
+                  data={["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"].map((rate) => ({
+                    value: rate,
+                    label: rate,
+                  }))}
+                />
+                <Tooltip
+                  label={`${t("ispStep1")}\n${t("ispStep2")}\n${t("ispStep3")}`}
+                  withArrow
+                  multiline
+                  w={220}
+                  styles={{ tooltip: { whiteSpace: "pre-line" } }}
+                >
+                  <Button size="compact-xs" variant="subtle" leftSection={<Info size={12} />} style={{ marginBottom: 4, flexShrink: 0 }}>
+                    {t("ispHelpLabel")}
+                  </Button>
+                </Tooltip>
+              </>
             )}
-            <Button size="compact-xs" variant="subtle" leftSection={<RefreshCw size={12} />} onClick={() => void state.refreshProbes()} loading={state.refreshing}>
-              {t("refresh")}
-            </Button>
-          </Stack>
-        ) : (
-          <Stack gap={8}>
-            <Select
-              size="xs"
-              label={t("selectPort")}
-              data={state.serialPorts.map((port) => ({ value: port, label: port }))}
-              value={state.selectedPort}
-              onChange={(value) => state.setSelectedPort(value ?? null)}
-              searchable
-            />
-            <Select
-              size="xs"
-              label={t("baudRate")}
-              value={String(state.baudRate)}
-              onChange={(value) => state.setBaudRate(Number(value ?? 115200))}
-              data={["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"].map((rate) => ({
-                value: rate,
-                label: rate,
-              }))}
-            />
-            <Text fz={11} c="dimmed">
-              {t("ispHint")}
-            </Text>
-          </Stack>
-        )}
+          </Group>
+        </Stack>
       </section>
 
-      {/* ② 器件 */}
+      {/* ── 左：配置面板（Keil Project 风格分层） ── */}
       <section className="flasher-card">
-        <CardTitle icon={<Zap size={14} />} title={t("device")} />
+        <Group justify="space-between" align="center" mb={5} wrap="nowrap">
+          <Text fw={600} fz={13}>
+            {t("device")}
+          </Text>
+          <Group gap={4} wrap="nowrap">
+            <Tooltip label={t("deviceManager")}>
+              <ActionIcon variant="light" color="blue" size="sm" aria-label={t("deviceManager")} onClick={() => setPackDownloaderOpened(true)}>
+                <CloudDownload size={14} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label={t("importPack")}>
+              <ActionIcon variant="subtle" color="gray" size="sm" aria-label={t("importPack")} onClick={() => void pickPack()}>
+                <Package size={14} />
+              </ActionIcon>
+            </Tooltip>
+            <Tooltip label={t("installedPacks")}>
+              <Badge variant="default" size="xs" style={{ cursor: "default" }}>
+                {state.packs.length}
+              </Badge>
+            </Tooltip>
+          </Group>
+        </Group>
         <Select
           size="xs"
           placeholder={t("deviceSearch")}
           value={state.selectedTarget}
           onChange={(value) => state.setSelectedTarget(value ?? null)}
-          data={state.targets.map((item) => ({
-            value: item.target,
-            label: `${item.name} · ${item.flashKb}KB`,
-            group: item.family,
-          }))}
+          data={deviceOptions}
           searchable
-          maxDropdownHeight={220}
+          maxDropdownHeight={180}
           nothingFoundMessage={t("noDeviceFound")}
         />
-        <Stack gap={6} mt={10}>
-          <Button size="compact-xs" variant="light" leftSection={<CloudDownload size={13} />} onClick={() => setPackDownloaderOpened(true)}>
-            {t("deviceManager")}
-          </Button>
-          <Group gap={8}>
-            <Button size="compact-xs" variant="subtle" leftSection={<Package size={13} />} onClick={() => void pickPack()}>
-              {t("importPack")}
-            </Button>
-            <Badge variant="default" size="xs">
-              {t("installedPacks")}: {state.packs.length}
-            </Badge>
-          </Group>
-        </Stack>
-      </section>
 
-      {/* ③ 固件 */}
-      <section className="flasher-card">
+        <Divider my={12} />
+
         <CardTitle icon={<FileUp size={14} />} title={t("firmware")} />
-        <Group gap={8}>
-          <Button size="compact-xs" variant="light" leftSection={<FolderOpen size={13} />} onClick={() => void pickFirmware()}>
+        <Stack gap={6}>
+          <Button size="compact-xs" variant="light" leftSection={<FolderOpen size={13} />} onClick={() => void pickFirmware()} style={{ alignSelf: "flex-start" }}>
             {t("chooseFile")}
           </Button>
-          {state.firmwarePath && (
-            <Badge variant="default" size="xs" className="ellipsis" style={{ maxWidth: 180 }}>
-              {state.firmwarePath.split(/[\\/]/).pop()}
-            </Badge>
+          {state.firmwarePath ? (
+            <>
+              <Badge variant="default" size="xs" className="ellipsis" style={{ alignSelf: "flex-start", maxWidth: "100%" }}>
+                {state.firmwarePath.split(/[\\/]/).pop()}
+              </Badge>
+              <Text fz={11} c="dimmed" className="path-break">
+                {state.firmwarePath}
+              </Text>
+            </>
+          ) : (
+            <Text fz={12} c="dimmed">
+              {t("noFirmwareHint")}
+            </Text>
           )}
-        </Group>
-        {state.firmwarePath && (
-          <Text fz={11} c="dimmed" mt={6} className="path-break">
-            {state.firmwarePath}
-          </Text>
-        )}
-      </section>
+        </Stack>
 
-      {/* ④ 配置参数 */}
-      <section className="flasher-card">
+        <Divider my={12} />
+
         <CardTitle icon={<SlidersHorizontal size={14} />} title={t("flashConfig")} />
         <Stack gap={8}>
+          <Group gap={16} wrap="wrap">
+            <Checkbox size="xs" label={t("chipErase")} checked={state.chipErase} onChange={(event) => state.setChipErase(event.currentTarget.checked)} />
+            <Checkbox size="xs" label={t("verifyAfterFlash")} checked={state.verifyAfterFlash} onChange={(event) => state.setVerifyAfterFlash(event.currentTarget.checked)} />
+          </Group>
           <Group gap={8} wrap="nowrap">
             <Checkbox size="xs" label={t("manualAddress")} checked={addressManual} onChange={(event) => setAddressManual(event.currentTarget.checked)} style={{ whiteSpace: "nowrap" }} />
             {addressManual && (
@@ -223,69 +296,29 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
               />
             )}
           </Group>
-          <Group gap={16}>
-            <Checkbox size="xs" label={t("chipErase")} checked={state.chipErase} onChange={(event) => state.setChipErase(event.currentTarget.checked)} />
-            <Checkbox size="xs" label={t("verifyAfterFlash")} checked={state.verifyAfterFlash} onChange={(event) => state.setVerifyAfterFlash(event.currentTarget.checked)} />
-          </Group>
         </Stack>
       </section>
 
-      {/* ⑤ 烧录操作（横跨） */}
+      {/* ── 右：烧录主区域（设备信息 + 操作 + 进度） ── */}
       <section className="flasher-card flash-action-bar">
-        <Group justify="space-between" align="flex-start" wrap="nowrap">
-          <Stack gap={8} style={{ flex: 1, minWidth: 0 }}>
-            <Group gap={8}>
-              <Button leftSection={<Play size={15} />} onClick={() => void state.flash()} disabled={!canFlash || running} loading={running}>
-                {t("startFlash")}
-              </Button>
-              <Button variant="light" size="xs" leftSection={<Trash2 size={13} />} onClick={() => void state.erase()} disabled={!canFlash || running}>
-                {t("chipErase")}
-              </Button>
-            </Group>
-            {running && (
-              <>
-                <Progress value={state.run.pct} size="sm" striped animated />
-                <Text fz={12} c="dimmed">
-                  {phaseLabel} {state.run.pct}%
-                </Text>
-              </>
-            )}
-            {state.run.success === true && (
-              <Group gap={6}>
-                <CircleCheck size={16} color="#2f9e44" />
-                <Text fz={13} c="green.8">
-                  {state.run.message}
-                </Text>
-              </Group>
-            )}
-            {state.run.success === false && (
-              <Group gap={6}>
-                <CircleX size={16} color="#e03131" />
-                <Text fz={13} c="red.8" className="path-break">
-                  {state.run.message}
-                </Text>
-              </Group>
-            )}
-          </Stack>
-
-          <Stack gap={4} style={{ minWidth: 190, flexShrink: 0 }}>
+        <Stack gap={12}>
+          {/* 设备信息 */}
+          <Stack gap={5}>
             <Group gap={6}>
-              <Text fz={12} fw={600}>
-                {t("chipInfo")}
+              <Cpu size={14} />
+              <Text fw={600} fz={13}>
+                {t("deviceInfoTitle")}
               </Text>
-              <Button size="compact-xs" variant="subtle" onClick={() => void state.readChipInfo()} disabled={!canFlash || running}>
-                {t("readChipInfo")}
-              </Button>
             </Group>
             {state.chipInfo ? (
               <>
-                <Text fz={12} className="ellipsis">
+                <Text fz={13} fw={600} className="ellipsis">
                   {state.chipInfo.target}
                 </Text>
-                <Text fz={12}>
-                  Flash: {state.chipInfo.flashSize ? `${Math.round(state.chipInfo.flashSize / 1024)} KB` : "-"}
-                </Text>
-                {state.chipInfo.chipId && <Text fz={12}>IDCODE: {state.chipInfo.chipId}</Text>}
+                <Group gap={16}>
+                  {state.chipInfo.flashSize && <Text fz={12}>Flash: {Math.round(state.chipInfo.flashSize / 1024)} KB</Text>}
+                  {state.chipInfo.chipId && <Text fz={12}>IDCODE: {state.chipInfo.chipId}</Text>}
+                </Group>
                 {state.chipInfo.uid.length > 0 && (
                   <Text fz={11} c="dimmed" className="path-break">
                     UID: {state.chipInfo.uid.join("")}
@@ -293,15 +326,58 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
                 )}
               </>
             ) : (
-              <Text fz={11} c="dimmed">
+              <Text fz={12} c="dimmed">
                 {t("chipInfoHint")}
               </Text>
             )}
           </Stack>
-        </Group>
+
+          <Divider />
+
+          {/* 操作按钮 */}
+          <Group gap={10}>
+            <Button
+              leftSection={running ? <Loader size={14} /> : <Play size={15} />}
+              onClick={() => void state.flash()}
+              disabled={!canFlash || running}
+              loading={running}
+              styles={{ root: { minWidth: 120 } }}
+            >
+              {t("startFlash")}
+            </Button>
+            <Button variant="light" size="xs" leftSection={<Trash2 size={13} />} onClick={() => void state.erase()} disabled={!canChip || running}>
+              {t("chipErase")}
+            </Button>
+            <Button size="compact-xs" variant="subtle" leftSection={<Cpu size={12} />} onClick={() => void state.readChipInfo()} disabled={!canChip || running}>
+              {t("readChipInfo")}
+            </Button>
+          </Group>
+
+          {/* 进度 / 结果 */}
+          {running && (
+            <Stack gap={4}>
+              <Progress value={state.run.pct} size="sm" striped animated />
+              <Text fz={12} c="dimmed">
+                {phaseLabel} {state.run.pct}%
+              </Text>
+            </Stack>
+          )}
+          {state.run.success === true && (
+            <div className="flash-result ok">
+              <CircleCheck size={17} />
+              <span>{state.run.message}</span>
+            </div>
+          )}
+          {state.run.success === false && (
+            <div className="flash-result fail">
+              <CircleX size={17} />
+              <span className="path-break">{state.run.message}</span>
+            </div>
+          )}
+        </Stack>
       </section>
 
-      {/* 日志 */}
+      {/* ── 输出窗口（Keil Build Output 风格，底部） ── */}
       {state.flashLogs.length > 0 && (
         <Paper className="flash-log-panel" withBorder>
           <Group justify="space-between" mb={4}>

@@ -18,8 +18,7 @@ from typing import Any, Callable
 
 from . import __version__
 from .flash import chip_info, erase, program as flash_program
-from .packs import download as pack_download
-from .packs import import_pack, list_packs, search as pack_search
+from .packs import import_pack, list_packs
 from .probes import list_probes
 from .production import records as production_records
 from .production import start as production_start
@@ -30,9 +29,12 @@ from .sn import read as sn_read
 from .sn import write as sn_write
 from .targets import list_targets
 
-# 需要访问硬件的重操作：串行执行，避免并发访问探针/串口
+# 需要访问硬件的重操作：串行执行，避免并发访问探针/串口。
+# probe.list 也在其中：并发的 USB/HID 枚举会让 macOS IOHIDManager 崩溃
+# （多个 pyOCD 子进程同时访问同一探针会互踢，进程直接 SIGTRAP）。
 _HARDWARE_LOCK = threading.Lock()
 _HARDWARE_METHODS = {
+    "probe.list",
     "flash.program",
     "flash.erase",
     "flash.chipInfo",
@@ -72,8 +74,6 @@ HANDLERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "target.list": list_targets,
     "pack.list": list_packs,
     "pack.import": import_pack,
-    "pack.search": pack_search,
-    "pack.download": pack_download,
     "flash.program": flash_program,
     "flash.erase": erase,
     "flash.chipInfo": chip_info,

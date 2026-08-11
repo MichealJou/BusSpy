@@ -12,10 +12,16 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import time
 from typing import Any
 
 # 枚举超时（秒）
 SCAN_TIMEOUT = 10.0
+
+# 探针枚举结果缓存：USB 枚举最慢（子进程 + pyOCD 导入 + HID 交互，最长 10s），
+# 页面初始化 / 多次刷新时避免重复触发；点击“刷新探针”会带 force 强制重扫。
+_CACHE_TTL = 3.0
+_SCAN_CACHE: dict[str, Any] = {"ts": 0.0, "result": None}
 
 _SCAN_SCRIPT = r"""
 import json, sys
@@ -43,8 +49,25 @@ json.dump(probes, sys.stdout)
 """
 
 
-def list_probes(_params: dict[str, Any] | None = None) -> dict[str, Any]:
-    """枚举当前连接的烧录器（子进程隔离，崩溃不影响主后端）。"""
+def list_probes(params: dict[str, Any] | None = None) -> dict[str, Any]:
+    """枚举当前连接的烧录器（子进程隔离，崩溃不影响主后端）。
+
+    TTL 缓存 3 秒；params 带 force=true 时跳过缓存强制重扫（前端“刷新探针”按钮）。
+    """
+    params = params or {}
+    force = bool(params.get("force"))
+    now = time.monotonic()
+    cached = _SCAN_CACHE["result"]
+    if not force and cached is not None and now - _SCAN_CACHE["ts"] < _CACHE_TTL:
+        return cached
+
+    result = _scan()
+    _SCAN_CACHE["ts"] = now
+    _SCAN_CACHE["result"] = result
+    return result
+
+
+def _scan() -> dict[str, Any]:
     try:
         result = subprocess.run(
             [sys.executable, "-c", _SCAN_SCRIPT],

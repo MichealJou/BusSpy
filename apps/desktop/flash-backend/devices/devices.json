@@ -1,49 +1,610 @@
 [
-  { "name": "STM32F030C8", "target": "stm32f030c8", "family": "STM32F0", "flashKb": 64, "ramKb": 8, "builtin": true },
-  { "name": "STM32F051R8", "target": "stm32f051", "family": "STM32F0", "flashKb": 64, "ramKb": 8, "builtin": true },
-  { "name": "STM32F103C8T6", "target": "STM32F103C8", "family": "STM32F1", "flashKb": 64, "ramKb": 20, "builtin": false },
-  { "name": "STM32F103RBT6", "target": "STM32F103RB", "family": "STM32F1", "flashKb": 128, "ramKb": 20, "builtin": false },
-  { "name": "STM32F103RCT6", "target": "stm32f103rc", "family": "STM32F1", "flashKb": 256, "ramKb": 48, "builtin": true },
-  { "name": "STM32F103VET6", "target": "STM32F103VE", "family": "STM32F1", "flashKb": 512, "ramKb": 64, "builtin": false },
-  { "name": "STM32F103ZET6", "target": "STM32F103ZE", "family": "STM32F1", "flashKb": 512, "ramKb": 64, "builtin": false },
-  { "name": "STM32F105RBT6", "target": "STM32F105RB", "family": "STM32F1", "flashKb": 128, "ramKb": 64, "builtin": false },
-  { "name": "STM32F205RBT6", "target": "STM32F205RB", "family": "STM32F2", "flashKb": 128, "ramKb": 64, "builtin": false },
-  { "name": "STM32F207ZGT6", "target": "STM32F207ZG", "family": "STM32F2", "flashKb": 1024, "ramKb": 128, "builtin": false },
-  { "name": "STM32F303RCT6", "target": "STM32F303RC", "family": "STM32F3", "flashKb": 256, "ramKb": 40, "builtin": false },
-  { "name": "STM32F401CCU6", "target": "STM32F401CC", "family": "STM32F4", "flashKb": 256, "ramKb": 64, "builtin": false },
-  { "name": "STM32F401RCT6", "target": "STM32F401RC", "family": "STM32F4", "flashKb": 256, "ramKb": 64, "builtin": false },
-  { "name": "STM32F405RGT6", "target": "STM32F405RG", "family": "STM32F4", "flashKb": 1024, "ramKb": 192, "builtin": false },
-  { "name": "STM32F407VGT6", "target": "STM32F407VG", "family": "STM32F4", "flashKb": 1024, "ramKb": 192, "builtin": false },
-  { "name": "STM32F407ZGT6", "target": "STM32F407ZG", "family": "STM32F4", "flashKb": 1024, "ramKb": 192, "builtin": false },
-  { "name": "STM32F407IGT6", "target": "STM32F407IG", "family": "STM32F4", "flashKb": 1024, "ramKb": 192, "builtin": false },
-  { "name": "STM32F411CEU6", "target": "STM32F411CE", "family": "STM32F4", "flashKb": 512, "ramKb": 128, "builtin": false },
-  { "name": "STM32F412RGT6", "target": "stm32f412xg", "family": "STM32F4", "flashKb": 1024, "ramKb": 256, "builtin": true },
-  { "name": "STM32F429ZIT6", "target": "stm32f429xi", "family": "STM32F4", "flashKb": 2048, "ramKb": 256, "builtin": true },
-  { "name": "STM32F429IGT6", "target": "STM32F429IG", "family": "STM32F4", "flashKb": 1024, "ramKb": 256, "builtin": false },
-  { "name": "STM32F446RET6", "target": "STM32F446RE", "family": "STM32F4", "flashKb": 512, "ramKb": 128, "builtin": false },
-  { "name": "STM32F746ZGT6", "target": "STM32F746ZG", "family": "STM32F7", "flashKb": 1024, "ramKb": 320, "builtin": false },
-  { "name": "STM32F767ZIT6", "target": "stm32f767zi", "family": "STM32F7", "flashKb": 2048, "ramKb": 512, "builtin": true },
-  { "name": "STM32G030F6", "target": "STM32G030F6", "family": "STM32G0", "flashKb": 32, "ramKb": 8, "builtin": false },
-  { "name": "STM32G071RBT6", "target": "STM32G071RB", "family": "STM32G0", "flashKb": 128, "ramKb": 36, "builtin": false },
-  { "name": "STM32G431RBT6", "target": "STM32G431RB", "family": "STM32G4", "flashKb": 128, "ramKb": 32, "builtin": false },
-  { "name": "STM32L053R8", "target": "STM32L053R8", "family": "STM32L0", "flashKb": 64, "ramKb": 8, "builtin": false },
-  { "name": "STM32L151C8", "target": "STM32L151C8", "family": "STM32L1", "flashKb": 64, "ramKb": 10, "builtin": false },
-  { "name": "STM32L432KC", "target": "stm32l432kc", "family": "STM32L4", "flashKb": 256, "ramKb": 64, "builtin": true },
-  { "name": "STM32L475RCT6", "target": "stm32l475xc", "family": "STM32L4", "flashKb": 256, "ramKb": 128, "builtin": true },
-  { "name": "STM32L476RGT6", "target": "STM32L476RG", "family": "STM32L4", "flashKb": 1024, "ramKb": 128, "builtin": false },
-  { "name": "STM32H743ZIT6", "target": "stm32h743xx", "family": "STM32H7", "flashKb": 2048, "ramKb": 1024, "builtin": true },
-  { "name": "STM32H750VBT6", "target": "stm32h750xx", "family": "STM32H7", "flashKb": 128, "ramKb": 1024, "builtin": true },
-  { "name": "GD32F103C8T6", "target": "GD32F103C8", "family": "GD32F1", "flashKb": 64, "ramKb": 20, "builtin": false },
-  { "name": "GD32F103RBT6", "target": "GD32F103RB", "family": "GD32F1", "flashKb": 128, "ramKb": 20, "builtin": false },
-  { "name": "GD32F103VET6", "target": "GD32F103VE", "family": "GD32F1", "flashKb": 512, "ramKb": 64, "builtin": false },
-  { "name": "GD32F103ZET6", "target": "GD32F103ZE", "family": "GD32F1", "flashKb": 512, "ramKb": 64, "builtin": false },
-  { "name": "GD32F303RCT6", "target": "GD32F303RC", "family": "GD32F3", "flashKb": 256, "ramKb": 40, "builtin": false },
-  { "name": "GD32F303VET6", "target": "GD32F303VE", "family": "GD32F3", "flashKb": 512, "ramKb": 64, "builtin": false },
-  { "name": "GD32F330C8T6", "target": "GD32F330C8", "family": "GD32F3", "flashKb": 64, "ramKb": 8, "builtin": false },
-  { "name": "GD32F350G8U6", "target": "GD32F350G8", "family": "GD32F3", "flashKb": 64, "ramKb": 8, "builtin": false },
-  { "name": "GD32F407VET6", "target": "GD32F407VE", "family": "GD32F4", "flashKb": 512, "ramKb": 192, "builtin": false },
-  { "name": "GD32F450VET6", "target": "GD32F450VE", "family": "GD32F4", "flashKb": 512, "ramKb": 256, "builtin": false },
-  { "name": "GD32F470VGT6", "target": "GD32F470VG", "family": "GD32F4", "flashKb": 1024, "ramKb": 320, "builtin": false },
-  { "name": "GD32E230C8T6", "target": "GD32E230C8", "family": "GD32E2", "flashKb": 64, "ramKb": 8, "builtin": false },
-  { "name": "GD32L233CBT6", "target": "GD32L233CB", "family": "GD32L2", "flashKb": 128, "ramKb": 32, "builtin": false }
+  {
+    "name": "GD32E230C8T6",
+    "target": "GD32E230C8",
+    "family": "GD32E2",
+    "flashKb": 64,
+    "ramKb": 8,
+    "builtin": false
+  },
+  {
+    "name": "GD32F103C8T6",
+    "target": "GD32F103C8",
+    "family": "GD32F1",
+    "flashKb": 64,
+    "ramKb": 20,
+    "builtin": false
+  },
+  {
+    "name": "GD32F103RBT6",
+    "target": "GD32F103RB",
+    "family": "GD32F1",
+    "flashKb": 128,
+    "ramKb": 20,
+    "builtin": false
+  },
+  {
+    "name": "GD32F103VET6",
+    "target": "GD32F103VE",
+    "family": "GD32F1",
+    "flashKb": 512,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "GD32F103ZET6",
+    "target": "GD32F103ZE",
+    "family": "GD32F1",
+    "flashKb": 512,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "GD32F303RCT6",
+    "target": "GD32F303RC",
+    "family": "GD32F3",
+    "flashKb": 256,
+    "ramKb": 40,
+    "builtin": false
+  },
+  {
+    "name": "GD32F303VET6",
+    "target": "GD32F303VE",
+    "family": "GD32F3",
+    "flashKb": 512,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "GD32F330C8T6",
+    "target": "GD32F330C8",
+    "family": "GD32F3",
+    "flashKb": 64,
+    "ramKb": 8,
+    "builtin": false
+  },
+  {
+    "name": "GD32F350G8U6",
+    "target": "GD32F350G8",
+    "family": "GD32F3",
+    "flashKb": 64,
+    "ramKb": 8,
+    "builtin": false
+  },
+  {
+    "name": "GD32F407VET6",
+    "target": "GD32F407VE",
+    "family": "GD32F4",
+    "flashKb": 512,
+    "ramKb": 192,
+    "builtin": false
+  },
+  {
+    "name": "GD32F450VET6",
+    "target": "GD32F450VE",
+    "family": "GD32F4",
+    "flashKb": 512,
+    "ramKb": 256,
+    "builtin": false
+  },
+  {
+    "name": "GD32F470VGT6",
+    "target": "GD32F470VG",
+    "family": "GD32F4",
+    "flashKb": 1024,
+    "ramKb": 320,
+    "builtin": false
+  },
+  {
+    "name": "GD32L233CBT6",
+    "target": "GD32L233CB",
+    "family": "GD32L2",
+    "flashKb": 128,
+    "ramKb": 32,
+    "builtin": false
+  },
+  {
+    "name": "STM32C031C6T6",
+    "target": "STM32C031C6Tx",
+    "family": "STM32C0",
+    "flashKb": 32,
+    "ramKb": 12,
+    "builtin": false
+  },
+  {
+    "name": "STM32F030C8",
+    "target": "stm32f030c8",
+    "family": "STM32F0",
+    "flashKb": 64,
+    "ramKb": 8,
+    "builtin": true
+  },
+  {
+    "name": "STM32F051R8",
+    "target": "stm32f051",
+    "family": "STM32F0",
+    "flashKb": 64,
+    "ramKb": 8,
+    "builtin": true
+  },
+  {
+    "name": "STM32F103C6T6",
+    "target": "STM32F103C6",
+    "family": "STM32F1",
+    "flashKb": 32,
+    "ramKb": 10,
+    "builtin": false
+  },
+  {
+    "name": "STM32F103C8T6",
+    "target": "STM32F103C8",
+    "family": "STM32F1",
+    "flashKb": 64,
+    "ramKb": 20,
+    "builtin": false
+  },
+  {
+    "name": "STM32F103R8T6",
+    "target": "STM32F103R8",
+    "family": "STM32F1",
+    "flashKb": 64,
+    "ramKb": 20,
+    "builtin": false
+  },
+  {
+    "name": "STM32F103RBT6",
+    "target": "STM32F103RB",
+    "family": "STM32F1",
+    "flashKb": 128,
+    "ramKb": 20,
+    "builtin": false
+  },
+  {
+    "name": "STM32F103RCT6",
+    "target": "stm32f103rc",
+    "family": "STM32F1",
+    "flashKb": 256,
+    "ramKb": 48,
+    "builtin": true
+  },
+  {
+    "name": "STM32F103VCT6",
+    "target": "STM32F103VC",
+    "family": "STM32F1",
+    "flashKb": 256,
+    "ramKb": 48,
+    "builtin": false
+  },
+  {
+    "name": "STM32F103VET6",
+    "target": "STM32F103VE",
+    "family": "STM32F1",
+    "flashKb": 512,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "STM32F103ZET6",
+    "target": "STM32F103ZE",
+    "family": "STM32F1",
+    "flashKb": 512,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "STM32F105RBT6",
+    "target": "STM32F105RB",
+    "family": "STM32F1",
+    "flashKb": 128,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "STM32F107VCT6",
+    "target": "STM32F107VC",
+    "family": "STM32F1",
+    "flashKb": 256,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "STM32F205RBT6",
+    "target": "STM32F205RB",
+    "family": "STM32F2",
+    "flashKb": 128,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "STM32F205RGT6",
+    "target": "STM32F205RGTx",
+    "family": "STM32F2",
+    "flashKb": 1024,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32F207VCT6",
+    "target": "STM32F207VCTx",
+    "family": "STM32F2",
+    "flashKb": 256,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32F207ZGT6",
+    "target": "STM32F207ZG",
+    "family": "STM32F2",
+    "flashKb": 1024,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32F303CBT6",
+    "target": "STM32F303CBTx",
+    "family": "STM32F3",
+    "flashKb": 128,
+    "ramKb": 40,
+    "builtin": false
+  },
+  {
+    "name": "STM32F303RCT6",
+    "target": "STM32F303RC",
+    "family": "STM32F3",
+    "flashKb": 256,
+    "ramKb": 40,
+    "builtin": false
+  },
+  {
+    "name": "STM32F303VET6",
+    "target": "STM32F303VETx",
+    "family": "STM32F3",
+    "flashKb": 512,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "STM32F401CCU6",
+    "target": "STM32F401CC",
+    "family": "STM32F4",
+    "flashKb": 256,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "STM32F401RCT6",
+    "target": "STM32F401RC",
+    "family": "STM32F4",
+    "flashKb": 256,
+    "ramKb": 64,
+    "builtin": false
+  },
+  {
+    "name": "STM32F401RET6",
+    "target": "STM32F401RETx",
+    "family": "STM32F4",
+    "flashKb": 512,
+    "ramKb": 96,
+    "builtin": false
+  },
+  {
+    "name": "STM32F405RGT6",
+    "target": "STM32F405RG",
+    "family": "STM32F4",
+    "flashKb": 1024,
+    "ramKb": 192,
+    "builtin": false
+  },
+  {
+    "name": "STM32F407IGT6",
+    "target": "STM32F407IG",
+    "family": "STM32F4",
+    "flashKb": 1024,
+    "ramKb": 192,
+    "builtin": false
+  },
+  {
+    "name": "STM32F407VET6",
+    "target": "STM32F407VETx",
+    "family": "STM32F4",
+    "flashKb": 512,
+    "ramKb": 192,
+    "builtin": false
+  },
+  {
+    "name": "STM32F407VGT6",
+    "target": "STM32F407VG",
+    "family": "STM32F4",
+    "flashKb": 1024,
+    "ramKb": 192,
+    "builtin": false
+  },
+  {
+    "name": "STM32F407ZET6",
+    "target": "STM32F407ZETx",
+    "family": "STM32F4",
+    "flashKb": 512,
+    "ramKb": 192,
+    "builtin": false
+  },
+  {
+    "name": "STM32F407ZGT6",
+    "target": "STM32F407ZG",
+    "family": "STM32F4",
+    "flashKb": 1024,
+    "ramKb": 192,
+    "builtin": false
+  },
+  {
+    "name": "STM32F411CEU6",
+    "target": "STM32F411CE",
+    "family": "STM32F4",
+    "flashKb": 512,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32F411RET6",
+    "target": "STM32F411RETx",
+    "family": "STM32F4",
+    "flashKb": 512,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32F412RET6",
+    "target": "stm32f412xe",
+    "family": "STM32F4",
+    "flashKb": 512,
+    "ramKb": 256,
+    "builtin": true
+  },
+  {
+    "name": "STM32F412RGT6",
+    "target": "stm32f412xg",
+    "family": "STM32F4",
+    "flashKb": 1024,
+    "ramKb": 256,
+    "builtin": true
+  },
+  {
+    "name": "STM32F429IGT6",
+    "target": "STM32F429IG",
+    "family": "STM32F4",
+    "flashKb": 1024,
+    "ramKb": 256,
+    "builtin": false
+  },
+  {
+    "name": "STM32F429ZIT6",
+    "target": "stm32f429xi",
+    "family": "STM32F4",
+    "flashKb": 2048,
+    "ramKb": 256,
+    "builtin": true
+  },
+  {
+    "name": "STM32F439ZIT6",
+    "target": "stm32f439xi",
+    "family": "STM32F4",
+    "flashKb": 2048,
+    "ramKb": 256,
+    "builtin": true
+  },
+  {
+    "name": "STM32F446RET6",
+    "target": "STM32F446RE",
+    "family": "STM32F4",
+    "flashKb": 512,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32F446ZET6",
+    "target": "STM32F446ZETx",
+    "family": "STM32F4",
+    "flashKb": 512,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32F722RET6",
+    "target": "STM32F722RETx",
+    "family": "STM32F7",
+    "flashKb": 512,
+    "ramKb": 256,
+    "builtin": false
+  },
+  {
+    "name": "STM32F746ZGT6",
+    "target": "STM32F746ZG",
+    "family": "STM32F7",
+    "flashKb": 1024,
+    "ramKb": 320,
+    "builtin": false
+  },
+  {
+    "name": "STM32F767ZIT6",
+    "target": "stm32f767zi",
+    "family": "STM32F7",
+    "flashKb": 2048,
+    "ramKb": 512,
+    "builtin": true
+  },
+  {
+    "name": "STM32G030F6",
+    "target": "STM32G030F6",
+    "family": "STM32G0",
+    "flashKb": 32,
+    "ramKb": 8,
+    "builtin": false
+  },
+  {
+    "name": "STM32G070RBT6",
+    "target": "STM32G070RBTx",
+    "family": "STM32G0",
+    "flashKb": 128,
+    "ramKb": 36,
+    "builtin": false
+  },
+  {
+    "name": "STM32G071RBT6",
+    "target": "STM32G071RB",
+    "family": "STM32G0",
+    "flashKb": 128,
+    "ramKb": 36,
+    "builtin": false
+  },
+  {
+    "name": "STM32G431RBT6",
+    "target": "STM32G431RB",
+    "family": "STM32G4",
+    "flashKb": 128,
+    "ramKb": 32,
+    "builtin": false
+  },
+  {
+    "name": "STM32G474RET6",
+    "target": "STM32G474RETx",
+    "family": "STM32G4",
+    "flashKb": 512,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32H723ZGT6",
+    "target": "stm32h723xx",
+    "family": "STM32H7",
+    "flashKb": 1024,
+    "ramKb": 564,
+    "builtin": true
+  },
+  {
+    "name": "STM32H743ZIT6",
+    "target": "stm32h743xx",
+    "family": "STM32H7",
+    "flashKb": 2048,
+    "ramKb": 1024,
+    "builtin": true
+  },
+  {
+    "name": "STM32H750VBT6",
+    "target": "stm32h750xx",
+    "family": "STM32H7",
+    "flashKb": 128,
+    "ramKb": 1024,
+    "builtin": true
+  },
+  {
+    "name": "STM32H7B0VBT6",
+    "target": "stm32h7b0xx",
+    "family": "STM32H7",
+    "flashKb": 128,
+    "ramKb": 1376,
+    "builtin": true
+  },
+  {
+    "name": "STM32L031K6T6",
+    "target": "stm32l031x6",
+    "family": "STM32L0",
+    "flashKb": 32,
+    "ramKb": 8,
+    "builtin": true
+  },
+  {
+    "name": "STM32L051C8T6",
+    "target": "STM32L051C8Tx",
+    "family": "STM32L0",
+    "flashKb": 64,
+    "ramKb": 8,
+    "builtin": false
+  },
+  {
+    "name": "STM32L053R8",
+    "target": "STM32L053R8",
+    "family": "STM32L0",
+    "flashKb": 64,
+    "ramKb": 8,
+    "builtin": false
+  },
+  {
+    "name": "STM32L151C8",
+    "target": "STM32L151C8",
+    "family": "STM32L1",
+    "flashKb": 64,
+    "ramKb": 10,
+    "builtin": false
+  },
+  {
+    "name": "STM32L152C8T6",
+    "target": "STM32L152C8Tx",
+    "family": "STM32L1",
+    "flashKb": 64,
+    "ramKb": 16,
+    "builtin": false
+  },
+  {
+    "name": "STM32L432KC",
+    "target": "stm32l432kc",
+    "family": "STM32L4",
+    "flashKb": 256,
+    "ramKb": 64,
+    "builtin": true
+  },
+  {
+    "name": "STM32L475RCT6",
+    "target": "stm32l475xc",
+    "family": "STM32L4",
+    "flashKb": 256,
+    "ramKb": 128,
+    "builtin": true
+  },
+  {
+    "name": "STM32L475RGT6",
+    "target": "stm32l475xg",
+    "family": "STM32L4",
+    "flashKb": 1024,
+    "ramKb": 128,
+    "builtin": true
+  },
+  {
+    "name": "STM32L476RGT6",
+    "target": "STM32L476RG",
+    "family": "STM32L4",
+    "flashKb": 1024,
+    "ramKb": 128,
+    "builtin": false
+  },
+  {
+    "name": "STM32L496RGT6",
+    "target": "STM32L496RGTx",
+    "family": "STM32L4",
+    "flashKb": 1024,
+    "ramKb": 320,
+    "builtin": false
+  },
+  {
+    "name": "STM32L552ZET6",
+    "target": "STM32L552ZETx",
+    "family": "STM32L5",
+    "flashKb": 512,
+    "ramKb": 256,
+    "builtin": false
+  },
+  {
+    "name": "STM32U585ZIT6",
+    "target": "STM32U585ZITx",
+    "family": "STM32U5",
+    "flashKb": 2048,
+    "ramKb": 786,
+    "builtin": false
+  },
+  {
+    "name": "STM32WB55RGV6",
+    "target": "STM32WB55RGVx",
+    "family": "STM32WB",
+    "flashKb": 1024,
+    "ramKb": 256,
+    "builtin": false
+  }
 ]

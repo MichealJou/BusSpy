@@ -110,7 +110,6 @@ def _connect(probe_id: str, target: str, pack: str | None = None):
     options: dict[str, Any] = {"frequency": 2_000_000}
     if pack:
         options["pack"] = pack
-    # auto_open 默认 True：ConnectHelper 会打开探针并初始化目标，勿再手动 open
     session = ConnectHelper.session_with_chosen_probe(
         unique_id=probe_id,
         target_override=target,
@@ -118,6 +117,9 @@ def _connect(probe_id: str, target: str, pack: str | None = None):
     )
     if session is None:
         raise RuntimeError(f"无法连接烧录器/芯片：{probe_id}")
+    # pyOCD 0.45：session_with_chosen_probe 不再自动打开 session，必须显式 open
+    if not session.is_open:
+        session.open()
     return session
 
 

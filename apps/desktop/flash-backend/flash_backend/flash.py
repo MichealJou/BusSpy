@@ -30,7 +30,6 @@ def _session(probe_id: str, target: str, verify: bool = True, pack: str | None =
     options: dict[str, Any] = {"frequency": DEFAULT_FREQUENCY, "verify": verify}
     if pack:
         options["pack"] = pack
-    # auto_open 默认 True：ConnectHelper 会打开探针并初始化目标，勿再手动 open
     session = ConnectHelper.session_with_chosen_probe(
         unique_id=probe_id,
         target_override=target,
@@ -38,6 +37,11 @@ def _session(probe_id: str, target: str, verify: bool = True, pack: str | None =
     )
     if session is None:
         raise RuntimeError(f"无法连接烧录器/芯片：{probe_id}")
+    # pyOCD 0.45：session_with_chosen_probe 不再自动打开 session，
+    # 必须显式 open()，否则 target 未初始化（读内存报 "no selected core"、
+    # 烧录/擦除也会失败）
+    if not session.is_open:
+        session.open()
     return session
 
 

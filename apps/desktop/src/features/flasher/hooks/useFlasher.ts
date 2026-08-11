@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   flashBackendRestart,
@@ -21,6 +21,7 @@ import {
   productionStop as productionStopRpc,
   type FlashBackendStatus,
   type FlashEventPayload,
+  type FlashProbeInfo,
   type FlashProgressEvent,
   type ProductionRecord,
   type ProductionStats,
@@ -29,8 +30,17 @@ import {
   DEFAULT_PRODUCTION_CONFIG,
   DEFAULT_SN_CONFIG,
   type FlasherStore,
+  type ProbeType,
   type ProductionConfig,
 } from "../lib/types";
+
+/** 按探针信息判断调试器类型（供 probeType 筛选） */
+function classifyProbe(probe: FlashProbeInfo): ProbeType {
+  const s = `${probe.vendor} ${probe.product}`.toLowerCase();
+  if (s.includes("st-link") || s.includes("stlink")) return "stlink";
+  if (s.includes("j-link") || s.includes("jlink") || s.includes("segger")) return "jlink";
+  return "cmsis-dap";
+}
 
 function emptyRun(): FlasherStore["run"] {
   return { running: false, phase: "", pct: 0, success: null, message: "", startedAt: 0 };
@@ -44,6 +54,7 @@ export function useFlasher(): FlasherStore {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [firmwarePath, setFirmwarePath] = useState<string | null>(null);
   const [connectionMode, setConnectionModeState] = useState<FlasherStore["connectionMode"]>("swd");
+  const [probeType, setProbeTypeState] = useState<ProbeType>("auto");
   const [serialPorts, setSerialPorts] = useState<string[]>([]);
   const [selectedPort, setSelectedPortState] = useState<string | null>(null);
   const [baudRate, setBaudRate] = useState(115200);
@@ -116,6 +127,18 @@ export function useFlasher(): FlasherStore {
     setConnectionModeState(mode);
   }, []);
 
+  const setProbeType: FlasherStore["setProbeType"] = useCallback((type) => {
+    setProbeTypeState(type);
+  }, []);
+
+  // 按调试器类型过滤后的探针列表
+  const visibleProbes = useMemo(() => {
+    if (probeType === "auto") {
+      return probes;
+    }
+    return probes.filter((probe) => classifyProbe(probe) === probeType);
+  }, [probes, probeType]);
+
   const setSelectedPort: FlasherStore["setSelectedPort"] = useCallback((port) => {
     setSelectedPortState(port);
   }, []);
@@ -140,13 +163,25 @@ export function useFlasher(): FlasherStore {
     setRefreshing(true);
     setError(null);
     try {
-      setProbes(await flashListProbes());
+      // force=true：跳过后端 3s TTL 缓存，确保插拔探针后点刷新能拿到最新
+      setProbes(await flashListProbes({ force: true }));
     } catch (err) {
       setError(String(err));
     } finally {
       setRefreshing(false);
     }
   }, []);
+
+  // 首次探针扫描为空（后端枚举偶发失败 / 探针刚插入）时自动重试，最多 2 次
+  const probeRetries = useRef(0);
+  useEffect(() => {
+    if (probes.length === 0 && probeRetries.current < 2) {
+      probeRetries.current += 1;
+      const timer = setTimeout(() => void refreshProbes(), 1500);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleProbes]);
 
   const loadTargets = useCallback(async () => {
     setLoading(true);
@@ -171,6 +206,8 @@ export function useFlasher(): FlasherStore {
     try {
       const ports = await listSerialPorts();
       setSerialPorts(ports.map((port) => port.name));
+      // 默认选中第一个可用串口，省去手动选择
+      setSelectedPortState((prev) => prev ?? ports[0]?.name ?? null);
     } catch (err) {
       setError(String(err));
     }
@@ -242,7 +279,7 @@ export function useFlasher(): FlasherStore {
         }
         return;
       }
-      const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+      const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
       if (!probe) {
         throw new Error("未检测到烧录器");
       }
@@ -267,11 +304,11 @@ export function useFlasher(): FlasherStore {
       setRun({ running: false, phase: "error", pct: 0, success: false, message: String(err), startedAt: 0 });
       setFlashLogs((prev) => [...prev, `烧录失败：${String(err)}`]);
     }
-  }, [probes, firmwarePath, serialPorts]);
+  }, [visibleProbes, firmwarePath, serialPorts]);
 
   const erase = useCallback(async () => {
     const target = selectedRef.current;
-    const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+    const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
     if (!target || !probe) {
       setError("请先选择器件并连接烧录器");
       return;
@@ -283,11 +320,11 @@ export function useFlasher(): FlasherStore {
     } catch (err) {
       setRun({ running: false, phase: "error", pct: 0, success: false, message: String(err), startedAt: 0 });
     }
-  }, [probes]);
+  }, [visibleProbes]);
 
   const readChipInfo = useCallback(async () => {
     const target = selectedRef.current;
-    const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+    const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
     if (!target || !probe) {
       setError("请先选择器件并连接烧录器");
       return;
@@ -298,12 +335,12 @@ export function useFlasher(): FlasherStore {
     } catch (err) {
       setError(`读取芯片信息失败：${String(err)}`);
     }
-  }, [probes]);
+  }, [visibleProbes]);
 
   // ── SN ─────────────────────────────────────────────────
   const readSn = useCallback(async () => {
     const target = selectedRef.current;
-    const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+    const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
     if (!target || !probe) {
       setError("请先选择器件并连接烧录器");
       return;
@@ -324,11 +361,11 @@ export function useFlasher(): FlasherStore {
     } catch (err) {
       setError(`读取 SN 失败：${String(err)}`);
     }
-  }, [probes]);
+  }, [visibleProbes]);
 
   const writeSn = useCallback(async (value: string) => {
     const target = selectedRef.current;
-    const probe = probes.find((item) => item.uniqueId) ?? probes[0];
+    const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
     if (!target || !probe) {
       setError("请先选择器件并连接烧录器");
       return false;
@@ -352,7 +389,7 @@ export function useFlasher(): FlasherStore {
       setError(`写入 SN 失败：${String(err)}`);
       return false;
     }
-  }, [probes]);
+  }, [visibleProbes]);
 
   // ── 量产 ────────────────────────────────────────────────
   const productionStart = useCallback(async () => {
@@ -405,16 +442,24 @@ export function useFlasher(): FlasherStore {
   }, []);
 
   // ── 初始化：环境自检 + 器件库 ──────────────────────────
+  // 页面始终先渲染；环境自检完成后各数据源并行独立加载（互不等待，任一失败不影响其余），
+  // 后端进程在 blocking 线程池异步跑，不会冻结 UI。
   useEffect(() => {
+    let cancelled = false;
     void checkEnvironment()
-      .then(() => {
-        if (statusRef.current?.ready) {
-          return Promise.all([refreshProbes(), loadTargets(), loadPacks(), refreshSerialPorts()]).then(() => undefined);
-        }
-        return Promise.resolve();
-      })
       .catch(() => undefined)
-      .finally(() => setInitializing(false));
+      .finally(() => {
+        if (cancelled) {
+          return;
+        }
+        setInitializing(false);
+        if (statusRef.current?.ready) {
+          void Promise.allSettled([refreshProbes(), loadTargets(), loadPacks(), refreshSerialPorts()]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -490,6 +535,9 @@ export function useFlasher(): FlasherStore {
   return {
     status,
     probes,
+    probeType,
+    setProbeType,
+    visibleProbes,
     targets,
     packs,
     selectedTarget,

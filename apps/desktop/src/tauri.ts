@@ -158,8 +158,8 @@ export async function flashBackendStatus(): Promise<FlashBackendStatus> {
   return invoke<FlashBackendStatus>("flash_backend_status");
 }
 
-export async function flashListProbes(): Promise<FlashProbeInfo[]> {
-  return invoke<FlashProbeInfo[]>("flash_list_probes");
+export async function flashListProbes(options?: { force?: boolean }): Promise<FlashProbeInfo[]> {
+  return invoke<FlashProbeInfo[]>("flash_list_probes", { force: options?.force ?? false });
 }
 
 export async function flashBootstrap(mirror: string): Promise<void> {
@@ -279,10 +279,50 @@ export interface PackSearchResult {
   pack: string;
   version: string;
   flashKb: number | null;
+  /** Pack 清单模式下该 Pack 覆盖的器件数（器件搜索时为 1 或省略） */
+  deviceCount?: number | null;
+  /** 内置器件（如 51 系列，非在线 Pack，不可下载） */
+  builtin?: boolean;
+}
+
+export interface PackCategory {
+  key: string;
+  /** 内置分类（如 51 系列，无在线 Pack 可下载） */
+  builtin?: boolean;
+  packs: PackSearchResult[];
+}
+
+export interface DeviceInfo {
+  name: string;
+  vendor: string;
+  family: string;
+  flashKb: number | null;
+  ramKb: number | null;
+  pack: string;
+  version: string;
+  builtin: boolean;
+}
+
+export interface DeviceFamily {
+  name: string;
+  devices: DeviceInfo[];
+}
+
+export interface DeviceVendor {
+  name: string;
+  families: DeviceFamily[];
 }
 
 export async function flashSearchPacks(query: string): Promise<{ results: PackSearchResult[]; total: number; packs: string[] }> {
   return invoke("flash_search_packs", { query });
+}
+
+export async function flashListPackCategories(): Promise<{ categories: PackCategory[] }> {
+  return invoke("flash_list_pack_categories");
+}
+
+export async function flashDeviceTree(): Promise<{ vendors: DeviceVendor[] }> {
+  return invoke("flash_device_tree");
 }
 
 export async function flashDownloadPack(pack: string): Promise<unknown> {

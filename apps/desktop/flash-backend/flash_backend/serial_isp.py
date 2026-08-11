@@ -116,14 +116,19 @@ def _sync(port: serial.Serial) -> None:
 
 
 def _get_chip_id(port: serial.Serial) -> int:
+    """读取芯片 ID（AN3155 GetID）。
+
+    协议响应为：ACK(0x79) + N + ID(N+1 字节) + ACK，其中 N = ID 字节数 - 1。
+    因此 `port.read(length + 1)` 读到的正好是 ID 全量字节，直接按大端解析。
+    """
     _send_command(port, CMD_GET_ID)
     length = _read_byte(port)
     if length < 1:
         raise RuntimeError("GetID 长度异常")
-    id_bytes = port.read(length + 1)  # length 字节 ID + 尾部 ACK
+    id_bytes = port.read(length + 1)  # N+1 字节 ID（不含尾部 ACK，下一轮 ACK 由后续命令消费）
     if len(id_bytes) != length + 1:
         raise TimeoutError("GetID 数据超时")
-    return int.from_bytes(id_bytes[: length - 1], "big")
+    return int.from_bytes(id_bytes, "big")
 
 
 def _extended_erase(port: serial.Serial) -> None:
@@ -193,3 +198,53 @@ def program(params: dict[str, Any] | None = None) -> dict[str, Any]:
                     raise RuntimeError(f"校验失败 @ 0x{start:08X}")
             emit_log("校验通过")
         return {"ok": True, "chipId": hex(chip_id), "verified": verify}
+
+
+# ── 单元测试：AN3155 帧解析（用 FakePort 模拟串口应答） ──────────────────
+
+import unittest
+
+
+class _FakePort:
+    """按预置字节队列应答的假串口，用于协议层单测。"""
+
+    def __init__(self, responses: list[int]):
+        self._responses = list(responses)
+        self.written = b""
+
+    def write(self, data) -> None:
+        self.written += bytes(data)
+
+    def flush(self) -> None:
+        pass
+
+    def read(self, size: int = 1) -> bytes:
+        data = bytes(self._responses[:size])
+        del self._responses[:size]
+        return data
+
+
+class SerialIspTests(unittest.TestCase):
+    def test_get_chip_id_two_byte_id(self):
+        # STM32F103：GetID 响应 ACK(0x79) + N=1 + ID[0x04,0x10]（0x0410）
+        port = _FakePort([ACK, 0x01, 0x04, 0x10])
+        self.assertEqual(_get_chip_id(port), 0x0410)
+
+    def test_get_chip_id_three_byte_id(self):
+        # 3 字节 ID：N=2
+        port = _FakePort([ACK, 0x02, 0x04, 0x10, 0x50])
+        self.assertEqual(_get_chip_id(port), 0x041050)
+
+    def test_get_chip_id_rejects_bad_length(self):
+        port = _FakePort([ACK, 0x00])  # N=0 视为异常（STM32 ID 均 ≥2 字节）
+        with self.assertRaises(RuntimeError):
+            _get_chip_id(port)
+
+    def test_frame_checksum(self):
+        self.assertEqual(_frame_checksum(0x02, b""), 0xFD)
+        # 0xFF ^ 0x31 ^ 0x00 ^ 0x00 ^ 0x08 ^ 0x00 = 0xC6
+        self.assertEqual(_frame_checksum(0x31, b"\x00\x00\x08\x00"), 0xC6)
+
+
+if __name__ == "__main__":
+    unittest.main()
