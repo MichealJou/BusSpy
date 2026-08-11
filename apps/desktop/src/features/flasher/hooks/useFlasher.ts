@@ -71,6 +71,22 @@ export function useFlasher(): FlasherStore {
 
   const statusRef = useRef<FlasherStore["status"]>(null);
   statusRef.current = status;
+
+  // 后端进程崩溃后的自动恢复函数（每次渲染刷新引用，事件监听调用最新版本）
+  const recoveryRef = useRef<() => void>(() => undefined);
+  recoveryRef.current = () => {
+    if (statusRef.current?.ready) {
+      return;
+    }
+    void checkEnvironment()
+      .then(() => {
+        if (statusRef.current?.ready) {
+          return Promise.all([refreshProbes(), loadTargets(), loadPacks(), refreshSerialPorts()]).then(() => undefined);
+        }
+        return Promise.resolve();
+      })
+      .catch(() => undefined);
+  };
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedTarget;
   const modeRef = useRef<FlasherStore["connectionMode"]>("swd");
@@ -414,6 +430,8 @@ export function useFlasher(): FlasherStore {
       const payload = event.payload;
       if (payload.event === "backend.exit") {
         setStatus((prev) => (prev ? { ...prev, ready: false } : prev));
+        // 后端进程崩溃（如探针 HID 兼容问题）后延迟自动重启并重新加载
+        setTimeout(() => recoveryRef.current(), 800);
       }
       if (payload.event === "flash.progress") {
         const data = payload.data as FlashProgressEvent;
