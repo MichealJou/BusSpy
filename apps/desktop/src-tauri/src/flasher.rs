@@ -572,6 +572,20 @@ pub fn flash_import_pack(app: AppHandle, pack_path: String) -> Result<Value, Str
     backend.call("pack.import", params, Duration::from_secs(600))
 }
 
+#[tauri::command]
+pub fn flash_search_packs(app: AppHandle, query: String) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    let params = json!({ "query": query });
+    backend.call("pack.search", params, Duration::from_secs(60))
+}
+
+#[tauri::command]
+pub fn flash_download_pack(app: AppHandle, pack: String) -> Result<Value, String> {
+    let backend = get_backend(&app)?;
+    let params = json!({ "pack": pack });
+    backend.call("pack.download", params, Duration::from_secs(600))
+}
+
 // ── 烧录 / 芯片信息 / SN ────────────────────────────────
 
 #[derive(Deserialize)]

@@ -274,6 +274,21 @@ export async function flashImportPack(packPath: string): Promise<unknown> {
   return invoke("flash_import_pack", { packPath });
 }
 
+export interface PackSearchResult {
+  device: string;
+  pack: string;
+  version: string;
+  flashKb: number | null;
+}
+
+export async function flashSearchPacks(query: string): Promise<{ results: PackSearchResult[]; total: number; packs: string[] }> {
+  return invoke("flash_search_packs", { query });
+}
+
+export async function flashDownloadPack(pack: string): Promise<unknown> {
+  return invoke("flash_download_pack", { pack });
+}
+
 export async function flashProgram(options: FlashProgramOptions): Promise<{ ok: boolean; verified: boolean }> {
   return invoke("flash_program", { options });
 }

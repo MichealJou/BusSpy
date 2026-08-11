@@ -186,6 +186,9 @@ export function useFlasher(): FlasherStore {
 
   const clearError = useCallback(() => setError(null), []);
   const clearFlashLogs = useCallback(() => setFlashLogs([]), []);
+  const pushFlashLog = useCallback((message: string) => {
+    setFlashLogs((prev) => [...prev.slice(-200), message]);
+  }, []);
 
   // ── 烧录 ────────────────────────────────────────────────
   const flash = useCallback(async () => {
@@ -519,5 +522,6 @@ export function useFlasher(): FlasherStore {
     setProductionConfig,
     clearError,
     clearFlashLogs,
+    pushFlashLog,
   };
 }

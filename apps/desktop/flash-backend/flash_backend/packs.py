@@ -1,4 +1,4 @@
-"""CMSIS DFP Pack 管理：导入本地官方 Pack / 列出已安装 Pack。
+"""CMSIS DFP Pack 管理：导入本地官方 Pack / 在线搜索 / 在线下载安装。
 
 pyOCD 通过 cmsis-pack-manager 索引查找已安装 Pack，文件布局为：
     <data_path>/<Vendor>/<Pack>/<version>.pack
@@ -8,6 +8,7 @@ pyOCD 通过 cmsis-pack-manager 索引查找已安装 Pack，文件布局为：
 
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,13 @@ def _ensure_index(cache) -> None:
     """本地 pack 目录为空索引时，扫描/下载一次索引（含各厂商器件清单）。"""
     if not cache.index:
         cache.cache_descriptors()
+
+
+def _from_pack_name(descriptor: dict[str, Any]) -> str:
+    from_pack = descriptor.get("from_pack")
+    if not isinstance(from_pack, dict):
+        return ""
+    return f"{from_pack.get('vendor', '')}.{from_pack.get('pack', '')}"
 
 
 def _index_pack_name(cache, vendor: str, pack: str) -> str | None:
@@ -129,3 +137,96 @@ def import_pack(params: dict[str, Any] | None = None) -> dict[str, Any]:
 
     emit_log("Pack 安装完成，器件库已扩展")
     return {"imported": True, "path": pack_path, "packs": _installed_pack_files(cache)}
+
+
+def search(params: dict[str, Any] | None = None) -> dict[str, Any]:
+    """在线搜索器件：按型号关键字匹配官方 Pack 索引，返回器件 + 所属 Pack。"""
+    params = params or {}
+    query = params.get("query", "").strip()
+    if not query:
+        raise ValueError("缺少搜索关键字")
+
+    cache = _cache()
+    _ensure_index(cache)
+
+    pattern = re.compile(re.escape(query), re.IGNORECASE)
+    results: list[dict[str, Any]] = []
+    seen_packs: set[str] = set()
+    for name, descriptor in cache.index.items():
+        if not isinstance(descriptor, dict) or not pattern.search(name):
+            continue
+        pack_name = _from_pack_name(descriptor)
+        version = ""
+        flash_size: int | None = None
+        from_pack = descriptor.get("from_pack")
+        if isinstance(from_pack, dict):
+            version = from_pack.get("version", "")
+        memories = descriptor.get("memories")
+        if isinstance(memories, dict):
+            for memory in memories.values():
+                if isinstance(memory, dict) and str(memory.get("default", "")).lower() == "1":
+                    flash_size = memory.get("size")
+                    break
+        results.append(
+            {
+                "device": name,
+                "pack": pack_name,
+                "version": version,
+                "flashKb": int(flash_size / 1024) if isinstance(flash_size, int) else None,
+            }
+        )
+        if pack_name:
+            seen_packs.add(pack_name)
+
+    results.sort(key=lambda item: item["device"].lower())
+    return {"results": results[:100], "total": len(results), "packs": sorted(seen_packs)}
+
+
+def download(params: dict[str, Any] | None = None) -> dict[str, Any]:
+    """在线下载并安装指定 Pack（自动从官方 Pack 服务器下载 + 注册）。"""
+    params = params or {}
+    pack_name = params.get("pack", "")
+    if not pack_name:
+        raise ValueError("缺少 Pack 名称")
+
+    cache = _cache()
+    _ensure_index(cache)
+
+    # 收集属于该 Pack 的器件描述，交给 cmsis-pack-manager 解析下载地址
+    devices = [
+        descriptor
+        for descriptor in cache.index.values()
+        if isinstance(descriptor, dict) and _from_pack_name(descriptor) == pack_name
+    ]
+    if not devices:
+        raise RuntimeError(f"索引中未找到 Pack：{pack_name}")
+
+    from cmsis_pack_manager import Cache  # noqa: F401
+    packs = cache.packs_for_devices(devices)
+    target = next((p for p in packs if str(p).startswith(pack_name)), None)
+    if target is None:
+        raise RuntimeError(f"无法解析 Pack 下载地址：{pack_name}")
+
+    emit_log(f"开始下载：{target}")
+    cache.download_pack_list([target])
+    emit_log("下载完成，正在注册器件库...")
+    _ensure_index(cache)
+
+    # 确保子目录布局可用（与本地导入一致）
+    vendor, pack = pack_name.split(".", 1)
+    index_name = _index_pack_name(cache, vendor, pack)
+    target_version = index_name.split(".")[-1] if index_name else "latest"
+    data_dir = Path(cache.data_path)
+    candidates = list(data_dir.glob(f"**/{pack_name.split('.')[-1]}*.pack")) + list(data_dir.glob(f"{pack_name}*.pack"))
+    # 统一从下载落盘位置复制到子目录布局
+    for candidate in candidates:
+        target_dir = data_dir / vendor / pack
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target_file = target_dir / f"{target_version}.pack"
+        if not target_file.is_file():
+            shutil.copy2(candidate, target_file)
+            emit_log(f"已注册 Pack：{target_file.name}")
+        break
+
+    emit_log(f"Pack 安装完成：{pack_name}")
+    return {"installed": True, "pack": pack_name, "packs": _installed_pack_files(cache)}

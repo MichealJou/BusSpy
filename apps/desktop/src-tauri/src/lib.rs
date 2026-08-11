@@ -851,6 +851,8 @@ pub fn run() {
             flasher::flash_list_targets,
             flasher::flash_list_packs,
             flasher::flash_import_pack,
+            flasher::flash_search_packs,
+            flasher::flash_download_pack,
             flasher::flash_program,
             flasher::flash_erase,
             flasher::flash_read_chip_info,

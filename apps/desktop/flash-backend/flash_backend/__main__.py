@@ -14,7 +14,8 @@ from typing import Any, Callable
 
 from . import __version__
 from .flash import chip_info, erase, program as flash_program
-from .packs import import_pack, list_packs
+from .packs import download as pack_download
+from .packs import import_pack, list_packs, search as pack_search
 from .probes import list_probes
 from .production import records as production_records
 from .production import start as production_start
@@ -55,6 +56,8 @@ HANDLERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "target.list": list_targets,
     "pack.list": list_packs,
     "pack.import": import_pack,
+    "pack.search": pack_search,
+    "pack.download": pack_download,
     "flash.program": flash_program,
     "flash.erase": erase,
     "flash.chipInfo": chip_info,

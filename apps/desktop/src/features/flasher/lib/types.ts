@@ -132,6 +132,7 @@ export interface FlasherActions {
   setProductionConfig: (patch: Partial<ProductionConfig>) => void;
   clearError: () => void;
   clearFlashLogs: () => void;
+  pushFlashLog: (message: string) => void;
 }
 
 export type FlasherStore = FlasherState & FlasherActions;

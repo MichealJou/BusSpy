@@ -16,22 +16,11 @@ import {
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
-import {
-  CircleCheck,
-  CircleX,
-  FileUp,
-  FolderOpen,
-  Info,
-  Package,
-  Play,
-  RefreshCw,
-  Trash2,
-  Usb,
-  Zap,
-} from "lucide-react";
+import { CircleCheck, CircleX, CloudDownload, FileUp, FolderOpen, Info, Package, Play, RefreshCw, Trash2, Usb, Zap } from "lucide-react";
 import { pickFile } from "../../../tauri";
 import { useI18n } from "../../../i18n";
 import type { FlasherStore } from "../lib/types";
+import { PackDownloadModal } from "./PackDownloadModal";
 
 interface ProgramPanelProps {
   state: FlasherStore;
@@ -40,6 +29,7 @@ interface ProgramPanelProps {
 export function ProgramPanel({ state }: ProgramPanelProps) {
   const { t } = useI18n();
   const [addressManual, setAddressManual] = useState(false);
+  const [packDownloaderOpened, setPackDownloaderOpened] = useState(false);
 
   const envReady = Boolean(state.status?.ready);
   const probe = state.probes.find((item) => item.uniqueId) ?? state.probes[0];
@@ -82,6 +72,15 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
 
   return (
     <div className="flasher-grid program-grid">
+      <PackDownloadModal
+        opened={packDownloaderOpened}
+        onClose={() => setPackDownloaderOpened(false)}
+        onInstalled={async () => {
+          await Promise.all([state.loadPacks(), state.loadTargets()]);
+        }}
+        onLog={state.pushFlashLog}
+        state={state}
+      />
       {/* ① 连接方式 */}
       <section className="flasher-card">
         <PanelTitle icon={<Usb size={15} />} title={t("connectionMode")} />
@@ -166,6 +165,9 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
           nothingFoundMessage={t("noDeviceFound")}
         />
         <Group gap={8} mt={8}>
+          <Button size="xs" variant="light" leftSection={<CloudDownload size={13} />} onClick={() => setPackDownloaderOpened(true)}>
+            {t("packDownloader")}
+          </Button>
           <Button size="xs" variant="light" leftSection={<Package size={13} />} onClick={() => void pickPack()}>
             {t("importPack")}
           </Button>
