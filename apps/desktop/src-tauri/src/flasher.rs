@@ -311,11 +311,19 @@ fn find_python() -> Option<std::path::PathBuf> {
     None
 }
 
-/// 打包内置的侧车后端（S5 阶段由 PyInstaller 产物填充）。
+/// 打包内置的侧车后端（应用自带 Python 环境，用户机器无需安装 Python）。
 /// Tauri externalBin 会重命名为 `flash-backend-<target-triple>`，因此按前缀扫描。
+/// 查找顺序：发布版资源目录（.app/Contents/Resources）→ 开发版构建产物。
 fn bundled_backend(app: &AppHandle) -> Option<PathBuf> {
     let resource_dir = app.path().resource_dir().ok()?;
-    let entries = std::fs::read_dir(&resource_dir).ok()?;
+    if let Some(found) = scan_sidecar_dir(&resource_dir) {
+        return Some(found);
+    }
+    scan_sidecar_dir(&backend_dir().join("build/dist"))
+}
+
+fn scan_sidecar_dir(dir: &std::path::Path) -> Option<PathBuf> {
+    let entries = std::fs::read_dir(dir).ok()?;
     for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
         let executable = if cfg!(windows) {
