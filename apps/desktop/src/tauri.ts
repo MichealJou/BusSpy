@@ -325,6 +325,10 @@ export async function flashDeviceTree(): Promise<{ vendors: DeviceVendor[] }> {
   return invoke("flash_device_tree");
 }
 
+export async function flashSearchDevices(query: string): Promise<{ results: DeviceInfo[]; total: number }> {
+  return invoke("flash_search_devices", { query });
+}
+
 export async function flashDownloadPack(pack: string): Promise<unknown> {
   return invoke("flash_download_pack", { pack });
 }

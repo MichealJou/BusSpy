@@ -717,6 +717,12 @@ pub async fn flash_device_tree(_app: AppHandle) -> Result<Value, String> {
     spawn_blocking_task(crate::pack_downloader::device_tree).await
 }
 
+/// 搜索器件（统一索引，限量扁平结果，避免前端大树渲染卡顿）。
+#[tauri::command]
+pub async fn flash_search_devices(_app: AppHandle, query: String) -> Result<Value, String> {
+    spawn_blocking_task(move || crate::pack_downloader::search_devices(&query)).await
+}
+
 #[tauri::command]
 pub async fn flash_download_pack(app: AppHandle, pack: String) -> Result<Value, String> {
     spawn_blocking_task(move || crate::pack_downloader::download(&app, &pack)).await

@@ -403,6 +403,69 @@ const GITHUB_PROXIES: &[&str] = &[
     "https://mirror.ghproxy.com/",
 ];
 
+/// 搜索器件（统一索引查询，毫秒级）。
+///
+/// 在内存缓存的 index.json 索引上按器件名匹配，返回**限量**扁平结果
+/// （最多 100 条），避免前端展开整棵大树的 DOM 爆炸卡顿。
+pub fn search_devices(query: &str) -> Result<Value, String> {
+    let query = query.trim();
+    if query.is_empty() {
+        return Err("缺少搜索关键字".to_string());
+    }
+    let index = load_index()?;
+    let q = query.to_lowercase();
+
+    let mut results: Vec<Value> = Vec::new();
+    let mut total: usize = 0;
+    if let Value::Object(descriptors) = &index {
+        for (name, descriptor) in descriptors {
+            if !name.to_lowercase().contains(&q) {
+                continue;
+            }
+            total += 1;
+            if results.len() >= 100 {
+                continue;
+            }
+            let from_pack = descriptor.get("from_pack").and_then(|value| value.as_object());
+            let pack_vendor = from_pack
+                .and_then(|fp| fp.get("vendor"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let pack = from_pack
+                .and_then(|fp| fp.get("pack"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let version = from_pack
+                .and_then(|fp| fp.get("version"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if pack.is_empty() {
+                continue;
+            }
+            // 芯片厂商（descriptor.vendor 去掉冒号后缀），fallback from_pack.vendor
+            let chip_vendor = descriptor
+                .get("vendor")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .split(':')
+                .next()
+                .unwrap_or("");
+            let vendor = if chip_vendor.is_empty() { pack_vendor } else { chip_vendor };
+            results.push(json!({
+                "name": name,
+                "vendor": vendor,
+                "family": descriptor.get("family").and_then(|v| v.as_str()).unwrap_or(""),
+                "flashKb": default_flash_kb(descriptor),
+                "ramKb": default_ram_kb(descriptor),
+                "pack": format!("{pack_vendor}.{pack}"),
+                "version": version,
+                "builtin": false,
+            }));
+        }
+    }
+    Ok(json!({ "results": results, "total": total }))
+}
+
 /// 生成候选下载地址：原始地址在前，GitHub 地址追加国内加速代理。
 fn candidate_urls(download_url: &str) -> Vec<String> {
     let mut urls = vec![download_url.to_string()];
@@ -452,22 +515,29 @@ pub fn download(app: &AppHandle, pack_name: &str) -> Result<Value, String> {
     let download_url = format!("{}/{}", url.trim_end_matches('/'), file_name);
 
     let client = reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(60))
+        // 大 Pack（如 84MB）在国内网络下载慢，超时放宽到 5 分钟，避免大包中途超时失败
+        .timeout(Duration::from_secs(300))
         .build()
         .map_err(|error| format!("创建下载客户端失败：{error}"))?;
 
     // 候选下载地址：原始地址 + GitHub 加速代理（国内网络访问 GitHub 不通时自动 fallback）
+    // 整体重试 2 轮：网络抖动/服务器偶发失败时自动重试
     let candidates = candidate_urls(&download_url);
     let mut response: Option<reqwest::blocking::Response> = None;
     let mut last_error = String::new();
-    for candidate in &candidates {
-        match client.get(candidate).send() {
-            Ok(resp) if resp.status().is_success() => {
-                response = Some(resp);
-                break;
+    for _attempt in 0..2 {
+        for candidate in &candidates {
+            match client.get(candidate).send() {
+                Ok(resp) if resp.status().is_success() => {
+                    response = Some(resp);
+                    break;
+                }
+                Ok(resp) => last_error = format!("HTTP {}", resp.status()),
+                Err(error) => last_error = error.to_string(),
             }
-            Ok(resp) => last_error = format!("HTTP {}", resp.status()),
-            Err(error) => last_error = error.to_string(),
+        }
+        if response.is_some() {
+            break;
         }
     }
     let mut response = response.ok_or_else(|| {
@@ -476,7 +546,7 @@ pub fn download(app: &AppHandle, pack_name: &str) -> Result<Value, String> {
                 "该器件包在官方仓库不存在（HTTP 404，可能已下架或版本更新）：{download_url}"
             )
         } else {
-            format!("下载失败（{download_url}）：{last_error}；GitHub 加速也失败")
+            format!("下载失败（{download_url}）：{last_error}；重试与 GitHub 加速均失败")
         }
     })?;
     let total = response.content_length().unwrap_or(0);

@@ -286,6 +286,7 @@ const dictionary = {
     downloading: "下载中",
     packDone: "完成",
     packFailed: "失败",
+    queuedLabel: "排队",
   },
   en: {
     serialAssistant: "Serial",
@@ -569,6 +570,7 @@ const dictionary = {
     downloading: "Downloading",
     packDone: "Done",
     packFailed: "Failed",
+    queuedLabel: "Queued",
   },
 } as const;
 

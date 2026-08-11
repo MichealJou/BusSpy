@@ -3,7 +3,6 @@ import {
   Alert,
   Badge,
   Button,
-  Checkbox,
   Group,
   Loader,
   Modal,
@@ -18,16 +17,19 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Clock,
   CloudDownload,
   Cpu,
   MemoryStick,
   Package,
   RefreshCw,
+  RotateCcw,
   Search,
 } from "lucide-react";
 import {
   flashDeviceTree,
   flashDownloadPack,
+  flashSearchDevices,
   type DeviceInfo,
   type DeviceVendor,
   type FlashEventPayload,
@@ -51,6 +53,9 @@ interface DownloadTask {
   message?: string;
 }
 
+/** 器件行下载状态（行内不转圈，排队/下载中统一小图标） */
+type DownloadState = "idle" | "queued" | "downloading" | "done" | "failed";
+
 interface TreeRowProps {
   depth: number;
   label: string;
@@ -59,24 +64,13 @@ interface TreeRowProps {
   onToggle?: () => void;
   selected?: boolean;
   badge?: string;
-  /** 器件行：勾选 */
-  checkable?: boolean;
-  checked?: boolean;
-  onCheck?: () => void;
   installed?: boolean;
-  /** 内置器件（无 Pack 可下载） */
   builtin?: boolean;
-  downloading?: boolean;
-  downloadDone?: boolean;
+  downloadState?: DownloadState;
   onDownload?: () => void;
-  /** 分支行（厂商/系列）父类勾选 */
-  branchCheckable?: boolean;
-  branchChecked?: boolean;
-  branchIndeterminate?: boolean;
-  onBranchCheck?: () => void;
 }
 
-/** 树节点行：缩进 + 图标 + 名称 + 计数；器件行可勾选、行内下载；分支行可父类勾选 */
+/** 树节点行：缩进 + 图标 + 名称 + 计数；器件行右侧下载状态图标（点击即入队） */
 function TreeRow({
   depth,
   label,
@@ -85,18 +79,10 @@ function TreeRow({
   onToggle,
   selected,
   badge,
-  checkable,
-  checked,
-  onCheck,
   installed,
   builtin,
-  downloading,
-  downloadDone,
+  downloadState = "idle",
   onDownload,
-  branchCheckable,
-  branchChecked,
-  branchIndeterminate,
-  onBranchCheck,
 }: TreeRowProps) {
   const isBranch = count !== undefined;
   return (
@@ -114,39 +100,16 @@ function TreeRow({
           {badge}
         </Badge>
       )}
-      {isBranch && branchCheckable && (
-        <Checkbox
-          size="xs"
-          checked={branchChecked}
-          indeterminate={branchIndeterminate}
-          onChange={() => onBranchCheck?.()}
-          onClick={(event) => event.stopPropagation()}
-          aria-label={`选择 ${label} 全部`}
-          style={{ flexShrink: 0 }}
-        />
-      )}
       {isBranch && <span className="pack-tree-count">{count}</span>}
 
-      {!isBranch && checkable && !installed && (
-        <Checkbox
-          size="xs"
-          checked={checked}
-          onChange={() => onCheck?.()}
-          onClick={(event) => event.stopPropagation()}
-          aria-label={`勾选 ${label}`}
-          style={{ flexShrink: 0 }}
-        />
-      )}
-
-      {/* 内置器件（8051 等）无 Pack 可下载，不显示下载按钮 */}
-      {!isBranch && !builtin && !installed && onDownload && (
+      {/* 器件行：下载状态图标（点击即入队；排队/下载中禁用不转圈，可连续点其他行） */}
+      {!isBranch && !builtin && !installed && (
         <Button
           size="compact-xs"
           variant="subtle"
           p={2}
-          loading={downloading}
-          disabled={downloading || downloadDone}
-          color={downloadDone ? "green" : "blue"}
+          disabled={downloadState === "queued" || downloadState === "downloading" || downloadState === "done"}
+          color={downloadState === "done" ? "green" : downloadState === "failed" ? "red" : "blue"}
           aria-label={`下载 ${label}`}
           onClick={(event) => {
             event.stopPropagation();
@@ -154,7 +117,15 @@ function TreeRow({
           }}
           styles={{ root: { minHeight: 20, height: 20, flexShrink: 0 } }}
         >
-          {downloadDone ? <Check size={12} /> : <CloudDownload size={12} />}
+          {downloadState === "done" ? (
+            <Check size={12} />
+          ) : downloadState === "queued" || downloadState === "downloading" ? (
+            <Clock size={12} />
+          ) : downloadState === "failed" ? (
+            <RotateCcw size={12} />
+          ) : (
+            <CloudDownload size={12} />
+          )}
         </Button>
       )}
     </div>
@@ -164,7 +135,7 @@ function TreeRow({
 /** 同时下载的 Pack 数量上限（并发池） */
 const MAX_CONCURRENT = 3;
 
-/** 器件包管理器（Keil Devices 布局：左器件树 + 右详情 + 底部固定批量下载） */
+/** 器件包管理器（Keil 风格：左器件树 + 右详情 + 底部固定状态/进度；点器件即入队排队下载） */
 export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog, state }: PackDownloadModalProps) {
   const { t } = useI18n();
   const [vendors, setVendors] = useState<DeviceVendor[]>([]);
@@ -173,9 +144,12 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
   const [expandedVendors, setExpandedVendors] = useState<Set<string>>(new Set());
   const [expandedFamilies, setExpandedFamilies] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<DeviceInfo | null>(null);
-  const [picked, setPicked] = useState<Set<string>>(new Set()); // 底部批量下载勾选（pack）
+  const [queue, setQueue] = useState<string[]>([]);
   const [tasks, setTasks] = useState<Record<string, DownloadTask>>({});
   const [error, setError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<DeviceInfo[]>([]);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searchingIndex, setSearchingIndex] = useState(false);
 
   const installedPacks = useMemo(() => new Set(state.packs.map((pack) => pack.name)), [state.packs]);
 
@@ -224,6 +198,31 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened]);
 
+  // 搜索：防抖 250ms 后走 Rust 统一索引查询（限量扁平结果，避免大树渲染卡顿）
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setSearchResults([]);
+      setSearchTotal(0);
+      return;
+    }
+    setSearchingIndex(true);
+    const timer = setTimeout(() => {
+      flashSearchDevices(q)
+        .then((result) => {
+          setSearchResults(result.results);
+          setSearchTotal(result.total);
+        })
+        .catch(() => {
+          setSearchResults([]);
+          setSearchTotal(0);
+        })
+        .finally(() => setSearchingIndex(false));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // pack.progress 事件（更新对应 pack 下载进度）
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
     listen<FlashEventPayload>("flash-event", (event) => {
@@ -288,49 +287,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     setExpandedFamilies((prev) => new Set(prev).add(family));
   }
 
-  function togglePicked(pack: string) {
-    if (installedPacks.has(pack)) {
-      return;
-    }
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(pack)) {
-        next.delete(pack);
-      } else {
-        next.add(pack);
-      }
-      return next;
-    });
-  }
-
-  /** 一组器件（厂商/系列下全部未装器件）的可勾选 pack 集合 */
-  function groupPacks(devices: DeviceInfo[]): string[] {
-    return devices
-      .filter((device) => !device.builtin && !installedPacks.has(device.pack))
-      .map((device) => device.pack);
-  }
-
-  /** 父类勾选：全选 / 全不选一组 pack */
-  function toggleGroup(packs: string[]) {
-    if (packs.length === 0) {
-      return;
-    }
-    setPicked((prev) => {
-      const next = new Set(prev);
-      const allSelected = packs.every((pack) => next.has(pack));
-      if (allSelected) {
-        packs.forEach((pack) => next.delete(pack));
-      } else {
-        packs.forEach((pack) => next.add(pack));
-      }
-      return next;
-    });
-  }
-
-  // 下载并发池：最多 MAX_CONCURRENT 个同时下载，其余排队自动推进
-  const [queue, setQueue] = useState<string[]>([]);
-
-  /** 请求下载（入队；已有下载/完成/在队中则忽略） */
+  /** 点器件即入队（排队自动下载；可连续点多个） */
   function enqueueDownload(pack: string) {
     if (installedPacks.has(pack)) {
       return;
@@ -345,7 +302,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     setQueue((prev) => [...prev, pack]);
   }
 
-  /** 实际执行下载（由调度器调用，不直接对外） */
+  /** 实际执行下载（由调度器调用） */
   async function startDownload(pack: string) {
     setTasks((prev) => ({ ...prev, [pack]: { status: "downloading", pct: 0 } }));
     try {
@@ -371,22 +328,6 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue, tasks]);
 
-  // 批量下载勾选的 pack：全部入队，交给并发池调度
-  function downloadSelected() {
-    if (picked.size === 0) {
-      return;
-    }
-    const newPacks = Array.from(picked).filter(
-      (pack) =>
-        !installedPacks.has(pack) &&
-        !queue.includes(pack) &&
-        tasks[pack]?.status !== "downloading" &&
-        tasks[pack]?.status !== "done",
-    );
-    setPicked(new Set());
-    setQueue((prev) => [...prev, ...newPacks]);
-  }
-
   const searching = query.trim() !== "";
   const totalCount = vendors.reduce(
     (sum, vendor) => sum + vendor.families.reduce((s, family) => s + family.devices.length, 0),
@@ -395,6 +336,64 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
   const doneCount = Object.values(tasks).filter((task) => task.status === "done").length;
   const activeCount = Object.values(tasks).filter((task) => task.status === "downloading").length;
   const selectedInstalled = selected ? installedPacks.has(selected.pack) : false;
+
+  /** 搜索结果：索引查询的限量扁平列表（不展开大树，渲染量小不卡） */
+  function renderSearchResults() {
+    if (searchingIndex && searchResults.length === 0) {
+      return (
+        <Group gap={6} p={8}>
+          <Loader size={13} />
+          <Text fz={12} c="dimmed">
+            {t("packSearching")}
+          </Text>
+        </Group>
+      );
+    }
+    if (searchResults.length === 0) {
+      return (
+        <Text fz={12} c="dimmed" p={8}>
+          {t("packSearchEmpty")}
+        </Text>
+      );
+    }
+    return (
+      <>
+        <Text fz={11} c="dimmed" p="6px 8px">
+          {t("packSearchResult").replace("{count}", String(searchTotal))}
+          {searchTotal > searchResults.length ? ` · ${t("packListCount").replace("{count}", String(searchResults.length))}` : ""}
+        </Text>
+        {searchResults.map((device) => {
+          const task = tasks[device.pack];
+          const installed = installedPacks.has(device.pack);
+          const queued = queue.includes(device.pack);
+          let downloadState: DownloadState = "idle";
+          if (task?.status === "done") {
+            downloadState = "done";
+          } else if (task?.status === "downloading") {
+            downloadState = "downloading";
+          } else if (queued) {
+            downloadState = "queued";
+          } else if (task?.status === "failed") {
+            downloadState = "failed";
+          }
+          return (
+            <TreeRow
+              key={device.name}
+              depth={0}
+              label={device.name}
+              badge={device.vendor}
+              selected={selected?.name === device.name}
+              onToggle={() => selectDevice(device, device.vendor, device.family)}
+              installed={installed}
+              builtin={device.builtin}
+              downloadState={downloadState}
+              onDownload={() => enqueueDownload(device.pack)}
+            />
+          );
+        })}
+      </>
+    );
+  }
 
   function renderTree() {
     if (filteredVendors.length === 0) {
@@ -407,8 +406,6 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     return filteredVendors.map((vendor) => {
       const vendorOpen = searching || expandedVendors.has(vendor.name);
       const vendorCount = vendor.families.reduce((sum, family) => sum + family.devices.length, 0);
-      const vendorPacks = groupPacks(vendor.families.flatMap((family) => family.devices));
-      const vendorSelected = vendorPacks.filter((pack) => picked.has(pack)).length;
       return (
         <div key={vendor.name}>
           <TreeRow
@@ -417,16 +414,10 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
             count={vendorCount}
             open={vendorOpen}
             onToggle={() => toggleVendor(vendor.name)}
-            branchCheckable
-            branchChecked={vendorPacks.length > 0 && vendorSelected === vendorPacks.length}
-            branchIndeterminate={vendorSelected > 0 && vendorSelected < vendorPacks.length}
-            onBranchCheck={() => toggleGroup(vendorPacks)}
           />
           {vendorOpen &&
             vendor.families.map((family) => {
               const familyOpen = searching || expandedFamilies.has(family.name);
-              const familyPacks = groupPacks(family.devices);
-              const familySelected = familyPacks.filter((pack) => picked.has(pack)).length;
               return (
                 <div key={family.name}>
                   <TreeRow
@@ -435,30 +426,33 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
                     count={family.devices.length}
                     open={familyOpen}
                     onToggle={() => toggleFamily(family.name)}
-                    branchCheckable
-                    branchChecked={familyPacks.length > 0 && familySelected === familyPacks.length}
-                    branchIndeterminate={familySelected > 0 && familySelected < familyPacks.length}
-                    onBranchCheck={() => toggleGroup(familyPacks)}
                   />
                   {familyOpen &&
                     family.devices.map((device) => {
                       const task = tasks[device.pack];
                       const installed = installedPacks.has(device.pack);
+                      const queued = queue.includes(device.pack);
+                      let downloadState: DownloadState = "idle";
+                      if (task?.status === "done") {
+                        downloadState = "done";
+                      } else if (task?.status === "downloading") {
+                        downloadState = "downloading";
+                      } else if (queued) {
+                        downloadState = "queued";
+                      } else if (task?.status === "failed") {
+                        downloadState = "failed";
+                      }
                       return (
                         <TreeRow
                           key={device.name}
                           depth={2}
                           label={device.name}
                           badge={device.builtin ? t("packBuiltin") : undefined}
-                          builtin={device.builtin}
                           selected={selected?.name === device.name}
                           onToggle={() => selectDevice(device, vendor.name, family.name)}
-                          checkable={!device.builtin && !installed}
-                          checked={picked.has(device.pack)}
-                          onCheck={() => togglePicked(device.pack)}
                           installed={installed}
-                          downloading={task?.status === "downloading"}
-                          downloadDone={task?.status === "done"}
+                          builtin={device.builtin}
+                          downloadState={downloadState}
                           onDownload={() => enqueueDownload(device.pack)}
                         />
                       );
@@ -545,11 +539,15 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
                   selectedInstalled || task?.status === "done" ? <Check size={14} /> : <CloudDownload size={14} />
                 }
                 onClick={() => enqueueDownload(device.pack)}
-                disabled={selectedInstalled || task?.status === "done"}
+                disabled={selectedInstalled || task?.status === "done" || queue.includes(device.pack)}
                 color={selectedInstalled || task?.status === "done" ? "green" : "blue"}
                 styles={{ root: { minWidth: 130 } }}
               >
-                {selectedInstalled || task?.status === "done" ? t("packInstalled") : t("installPack")}
+                {selectedInstalled || task?.status === "done"
+                  ? t("packInstalled")
+                  : queue.includes(device.pack)
+                    ? t("queuedLabel")
+                    : t("installPack")}
               </Button>
             )}
             {task?.status === "failed" && task.message && (
@@ -571,7 +569,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
       size="xl"
       centered
       styles={{
-        body: { maxHeight: "75vh", overflow: "hidden", display: "flex", flexDirection: "column" },
+        body: { height: "70vh", overflow: "hidden", display: "flex", flexDirection: "column" },
       }}
     >
       <Stack gap={10} style={{ flex: 1, minHeight: 0 }}>
@@ -596,7 +594,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
         )}
 
         <div className="pack-modal-body">
-          {/* 左：器件树（行内勾选 + 下载） */}
+          {/* 左：器件树（点器件即入队下载） */}
           <div className="pack-tree-panel">
             <div className="pack-tree-header">
               <span>{t("devicesTitle")}</span>
@@ -610,6 +608,8 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
                     {t("packSearching")}
                   </Text>
                 </Group>
+              ) : query.trim() ? (
+                renderSearchResults()
               ) : (
                 renderTree()
               )}
@@ -619,64 +619,47 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
           {/* 右：器件详情 */}
           <div className="pack-detail-panel">{renderDetail()}</div>
         </div>
-
-        {/* 底部固定批量下载栏 + 下载进度（始终可见） */}
-        <div className="pack-download-bar">
-          <Group justify="space-between" align="center" wrap="nowrap">
-            <Text fz={12} c="dimmed" className="ellipsis" style={{ flex: 1, minWidth: 0 }}>
-              {t("deviceCount").replace("{count}", String(totalCount))}
-              {picked.size > 0 && ` · ${t("selectedCount").replace("{count}", String(picked.size))}`}
-              {doneCount > 0 && ` · ${t("downloadedCount").replace("{count}", String(doneCount))}`}
-              {queue.length > 0 && ` · 等待 ${queue.length}`}
-              {activeCount > 0 && ` · 下载中 ${activeCount}/${MAX_CONCURRENT}`}
-            </Text>
-            <Button
-              size="sm"
-              leftSection={<CloudDownload size={14} />}
-              onClick={downloadSelected}
-              disabled={picked.size === 0}
-              styles={{ root: { minWidth: 140, flexShrink: 0 } }}
-            >
-              {t("downloadSelected")}
-              {picked.size > 0 ? ` (${picked.size})` : ""}
-            </Button>
-          </Group>
-
-          {/* 下载进度（固定底部，始终可见） */}
-          {Object.keys(tasks).length > 0 && (
-            <Stack gap={4} mt={8}>
-              {Object.entries(tasks)
-                .filter(([, task]) => task.status === "downloading")
-                .map(([pack, task]) => {
-                  const doneMb = task.downloadedBytes ? (task.downloadedBytes / 1048576).toFixed(1) : "?";
-                  const totalMb = task.totalBytes ? (task.totalBytes / 1048576).toFixed(1) : "?";
-                  return (
-                    <Tooltip
-                      key={pack}
-                      label={`${pack}\n${doneMb} MB / ${totalMb} MB · ${task.pct}%`}
-                      multiline
-                      withArrow
-                    >
-                      <div>
-                        <Progress value={task.pct} size="xs" striped animated />
-                        <Text fz={11} c="dimmed" mt={2} className="ellipsis">
-                          {t("downloading")} {pack} {task.pct}%
-                        </Text>
-                      </div>
-                    </Tooltip>
-                  );
-                })}
-              {Object.entries(tasks)
-                .filter(([, task]) => task.status === "failed")
-                .map(([pack, task]) => (
-                  <Text key={pack} fz={11} c="red">
-                    {t("packFailed")}: {pack} — {task.message}
-                  </Text>
-                ))}
-            </Stack>
-          )}
-        </div>
       </Stack>
+
+      {/* 底部固定状态栏（始终可见）：下载中 / 排队 / 已完成 + 进度 */}
+      <div className="pack-download-bar">
+        <Group justify="space-between" align="center" wrap="nowrap">
+          <Text fz={12} c="dimmed" className="ellipsis" style={{ flex: 1, minWidth: 0 }}>
+            {t("deviceCount").replace("{count}", String(totalCount))}
+            {activeCount > 0 && ` · ${t("downloading")} ${activeCount}/${MAX_CONCURRENT}`}
+            {queue.length > 0 && ` · ${t("queuedLabel")} ${queue.length}`}
+            {doneCount > 0 && ` · ${t("downloadedCount").replace("{count}", String(doneCount))}`}
+          </Text>
+        </Group>
+
+        {Object.keys(tasks).length > 0 && (
+          <Stack gap={4} mt={8}>
+            {Object.entries(tasks)
+              .filter(([, task]) => task.status === "downloading")
+              .map(([pack, task]) => {
+                const doneMb = task.downloadedBytes ? (task.downloadedBytes / 1048576).toFixed(1) : "?";
+                const totalMb = task.totalBytes ? (task.totalBytes / 1048576).toFixed(1) : "?";
+                return (
+                  <Tooltip key={pack} label={`${pack}\n${doneMb} MB / ${totalMb} MB · ${task.pct}%`} multiline withArrow>
+                    <div>
+                      <Progress value={task.pct} size="xs" striped animated />
+                      <Text fz={11} c="dimmed" mt={2} className="ellipsis">
+                        {t("downloading")} {pack} {task.pct}%
+                      </Text>
+                    </div>
+                  </Tooltip>
+                );
+              })}
+            {Object.entries(tasks)
+              .filter(([, task]) => task.status === "failed")
+              .map(([pack, task]) => (
+                <Text key={pack} fz={11} c="red">
+                  {t("packFailed")}: {pack} — {task.message}
+                </Text>
+              ))}
+          </Stack>
+        )}
+      </div>
     </Modal>
   );
 }
