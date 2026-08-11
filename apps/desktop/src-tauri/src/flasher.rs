@@ -244,7 +244,8 @@ impl Drop for FlasherBackend {
     }
 }
 
-/// 解析后端启动命令：优先内置 sidecar / 环境变量，其次开发模式 venv / 系统 python。
+/// 解析后端启动命令：优先内置 sidecar / 环境变量，其次开发模式 venv；
+/// venv 缺失时不优先回退系统 python3（版本老/无证书），而是尝试更好的候选。
 fn resolve_backend_command(app: &AppHandle) -> Result<(String, Vec<String>, PathBuf), String> {
     if let Ok(explicit) = std::env::var("BUSSPY_FLASH_BACKEND") {
         if !explicit.is_empty() {
@@ -266,12 +267,48 @@ fn resolve_backend_command(app: &AppHandle) -> Result<(String, Vec<String>, Path
         ));
     }
 
-    let python = std::env::var("BUSSPY_FLASH_PYTHON").unwrap_or_else(|_| "python3".to_string());
+    // venv 缺失：从候选列表里选一个可用的 Python（不用 macOS 系统自带 3.9 打头）
+    let python = find_python().ok_or_else(|| "未找到可用的 Python，请先初始化烧录环境".to_string())?;
     Ok((
-        python,
+        python.to_string_lossy().to_string(),
         vec!["-m".to_string(), "flash_backend".to_string()],
         backend_dir,
     ))
+}
+
+/// Python 候选列表（按优先级）：用户指定 → 项目常用安装 → PATH → 系统自带（最后兜底）。
+/// 系统自带 /usr/bin/python3（3.9）缺少 CA 证书且版本老，尽量不用。
+fn python_candidates() -> Vec<String> {
+    let mut candidates = Vec::new();
+    if let Ok(explicit) = std::env::var("BUSSPY_FLASH_PYTHON") {
+        if !explicit.is_empty() {
+            candidates.push(explicit);
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        candidates.push("/usr/local/bin/python3".to_string()); // python.org
+        candidates.push("/opt/homebrew/bin/python3".to_string()); // Homebrew
+        candidates.push("/Library/Frameworks/Python.framework/Versions/Current/bin/python3".to_string());
+    }
+    candidates.push("python3".to_string()); // PATH
+    candidates.push("/usr/bin/python3".to_string()); // macOS 系统自带，最后兜底
+    candidates
+}
+
+/// 探测第一个可用的 Python（存在且能执行）。
+fn find_python() -> Option<std::path::PathBuf> {
+    for candidate in python_candidates() {
+        let path = std::path::PathBuf::from(&candidate);
+        if path.is_file() {
+            return Some(path);
+        }
+        // 非绝对路径（如 PATH 里的 python3）直接返回，交给 Command 解析
+        if !candidate.contains('/') {
+            return Some(path);
+        }
+    }
+    None
 }
 
 /// 打包内置的侧车后端（S5 阶段由 PyInstaller 产物填充）。
@@ -420,7 +457,10 @@ pub fn flash_bootstrap(app: AppHandle, mirror: Option<String>) -> Result<(), Str
     let backend_dir_path = backend_dir();
     let venv_path = venv_python(&backend_dir_path);
     let venv_dir = venv_path.parent().unwrap_or(&backend_dir_path).to_path_buf();
-    let python = std::env::var("BUSSPY_FLASH_PYTHON").unwrap_or_else(|_| "python3".to_string());
+    // 创建 venv 的 Python：用候选白名单（避免 macOS 系统自带 3.9）
+    let python = find_python()
+        .map(|path| path.to_string_lossy().to_string())
+        .unwrap_or_else(|| "python3".to_string());
 
     thread::spawn(move || {
         let emit_log = |line: &str| {

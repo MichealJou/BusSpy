@@ -53,6 +53,11 @@ export function EnvironmentPanel({ state }: EnvironmentPanelProps) {
             <Badge variant="default" size="sm">
               {mode}
             </Badge>
+            {state.status?.python && (
+              <Text fz={11} c="dimmed" className="ellipsis" title={state.status.python} style={{ maxWidth: 260 }}>
+                {state.status.python}
+              </Text>
+            )}
           </>
         ) : (
           <>
