@@ -17,8 +17,7 @@ import traceback
 from typing import Any, Callable
 
 from . import __version__
-from .flash import chip_info, erase, program as flash_program
-from .packs import import_pack, list_packs
+from .packs import import_pack, list_algorithms, list_packs
 from .probes import list_probes
 from .production import records as production_records
 from .production import start as production_start
@@ -28,6 +27,8 @@ from .serial_isp import program as isp_program
 from .sn import read as sn_read
 from .sn import write as sn_write
 from .targets import list_targets
+# 硬件重操作（烧录/擦除/读芯片）走独立子进程：崩溃隔离 + 无 session 残留
+from .worker import chip_info, erase, program as flash_program
 
 # 需要访问硬件的重操作：串行执行，避免并发访问探针/串口。
 # probe.list 也在其中：并发的 USB/HID 枚举会让 macOS IOHIDManager 崩溃
@@ -73,6 +74,7 @@ HANDLERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "probe.list": list_probes,
     "target.list": list_targets,
     "pack.list": list_packs,
+    "pack.algorithms": list_algorithms,
     "pack.import": import_pack,
     "flash.program": flash_program,
     "flash.erase": erase,

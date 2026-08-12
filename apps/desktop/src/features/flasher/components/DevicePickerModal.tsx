@@ -35,14 +35,16 @@ import {
   type FlashEventPayload,
 } from "../../../tauri";
 import { useI18n } from "../../../i18n";
-import type { FlasherStore } from "../lib/types";
 
-interface PackDownloadModalProps {
+interface DevicePickerModalProps {
   opened: boolean;
   onClose: () => void;
-  onInstalled: () => Promise<void>;
-  onLog: (message: string) => void;
-  state: FlasherStore;
+  selectedTarget: string | null;
+  /** 选择器件（传入 pyOCD target 名，如 STM32F407ZG） */
+  onSelect: (target: string) => void;
+  installedPacks: string[];
+  /** DFP 安装后刷新内置列表 / Pack 列表 */
+  onInstalled?: () => Promise<void> | void;
 }
 
 interface DownloadTask {
@@ -53,7 +55,6 @@ interface DownloadTask {
   message?: string;
 }
 
-/** 器件行下载状态（行内不转圈，排队/下载中统一小图标） */
 type DownloadState = "idle" | "queued" | "downloading" | "done" | "failed";
 
 interface TreeRowProps {
@@ -102,7 +103,7 @@ function TreeRow({
       )}
       {isBranch && <span className="pack-tree-count">{count}</span>}
 
-      {/* 器件行：下载状态图标（点击即入队；排队/下载中禁用不转圈，可连续点其他行） */}
+      {/* 器件行：未装 Pack 且非内置 → 下载按钮（点击即入队） */}
       {!isBranch && !builtin && !installed && (
         <Button
           size="compact-xs"
@@ -110,7 +111,7 @@ function TreeRow({
           p={2}
           disabled={downloadState === "queued" || downloadState === "downloading" || downloadState === "done"}
           color={downloadState === "done" ? "green" : downloadState === "failed" ? "red" : "blue"}
-          aria-label={`下载 ${label}`}
+          aria-label={`下载 ${label} 的 DFP`}
           onClick={(event) => {
             event.stopPropagation();
             onDownload?.();
@@ -135,8 +136,10 @@ function TreeRow({
 /** 同时下载的 Pack 数量上限（并发池） */
 const MAX_CONCURRENT = 3;
 
-/** 器件包管理器（Keil 风格：左器件树 + 右详情 + 底部固定状态/进度；点器件即入队排队下载） */
-export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog, state }: PackDownloadModalProps) {
+/** 器件选择（Keil 风格，与器件包管理器同布局：左器件树 + 右详情 + 底部固定选择栏）。
+ * 点器件即选中，右侧详情底部"确认选择"；未装 DFP 的器件可直接入队下载。
+ */
+export function DevicePickerModal({ opened, onClose, selectedTarget, onSelect, installedPacks, onInstalled }: DevicePickerModalProps) {
   const { t } = useI18n();
   const [vendors, setVendors] = useState<DeviceVendor[]>([]);
   const [loading, setLoading] = useState(false);
@@ -150,17 +153,42 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
   const [searchResults, setSearchResults] = useState<DeviceInfo[]>([]);
   const [searchTotal, setSearchTotal] = useState(0);
   const [searchingIndex, setSearchingIndex] = useState(false);
+  // 最近选择的器件（localStorage 持久化，最多 8 个）
+  const [recentDevices, setRecentDevices] = useState<DeviceInfo[]>([]);
 
-  // 已装 packs + 本次会话下载完成的 packs（下载完成立即显示已装，不等外部刷新）
-  const installedPacks = useMemo(() => {
-    const set = new Set(state.packs.map((pack) => pack.name));
+  // 打开弹窗时读取最近选择记录
+  useEffect(() => {
+    if (opened) {
+      try {
+        const raw = window.localStorage.getItem("flasher.recentDevices");
+        setRecentDevices(raw ? (JSON.parse(raw) as DeviceInfo[]) : []);
+      } catch {
+        setRecentDevices([]);
+      }
+    }
+  }, [opened]);
+
+  /** 记录一次器件选择（去重置顶，最多保留 8 个） */
+  function recordRecent(device: DeviceInfo) {
+    setRecentDevices((prev) => {
+      const next = [device, ...prev.filter((d) => d.target !== device.target)].slice(0, 8);
+      try {
+        window.localStorage.setItem("flasher.recentDevices", JSON.stringify(next));
+      } catch { /* 忽略存储失败 */ }
+      return next;
+    });
+  }
+
+  // 已装 packs + 本次会话下载完成的 packs（避免依赖外部刷新时序，下载完立即显示已装）
+  const installed = useMemo(() => {
+    const set = new Set(installedPacks);
     for (const [pack, task] of Object.entries(tasks)) {
       if (task.status === "done") {
         set.add(pack);
       }
     }
     return set;
-  }, [state.packs, tasks]);
+  }, [installedPacks, tasks]);
 
   const filteredVendors = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -203,13 +231,13 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
   useEffect(() => {
     if (opened) {
       loadTree();
-      // 打开时刷新已装 packs（避免跨弹窗下载后状态不同步）
-      void onInstalled();
+      // 打开时刷新已装 packs（避免下载器里装完、这里还显示未装的时序问题）
+      void onInstalled?.();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened]);
 
-  // 搜索：防抖 250ms 后走 Rust 统一索引查询（限量扁平结果，避免大树渲染卡顿）
+  // 搜索：防抖 250ms 后走 Rust 统一索引（内置 + 在线合并）
   useEffect(() => {
     const q = query.trim();
     if (!q) {
@@ -298,9 +326,9 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     setExpandedFamilies((prev) => new Set(prev).add(family));
   }
 
-  /** 点器件即入队（排队自动下载；可连续点多个） */
+  /** 点器件即入队下载（排队自动下载；可连续点多个） */
   function enqueueDownload(pack: string) {
-    if (installedPacks.has(pack)) {
+    if (installed.has(pack)) {
       return;
     }
     const task = tasks[pack];
@@ -319,7 +347,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     try {
       await flashDownloadPack(pack);
       setTasks((prev) => ({ ...prev, [pack]: { status: "done", pct: 100 } }));
-      await onInstalled();
+      await onInstalled?.();
     } catch (err) {
       setTasks((prev) => ({ ...prev, [pack]: { status: "failed", pct: 0, message: String(err) } }));
     }
@@ -344,11 +372,29 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     (sum, vendor) => sum + vendor.families.reduce((s, family) => s + family.devices.length, 0),
     0,
   );
-  const doneCount = Object.values(tasks).filter((task) => task.status === "done").length;
   const activeCount = Object.values(tasks).filter((task) => task.status === "downloading").length;
-  const selectedInstalled = selected ? installedPacks.has(selected.pack) : false;
+  const selectedInstalled = selected ? installed.has(selected.pack) : false;
+  const isCurrent = (device: DeviceInfo) => selectedTarget === device.target;
 
-  /** 搜索结果：索引查询的限量扁平列表（不展开大树，渲染量小不卡） */
+  function deviceDownloadState(device: DeviceInfo): DownloadState {
+    const task = tasks[device.pack];
+    const queued = queue.includes(device.pack);
+    if (task?.status === "done") {
+      return "done";
+    }
+    if (task?.status === "downloading") {
+      return "downloading";
+    }
+    if (queued) {
+      return "queued";
+    }
+    if (task?.status === "failed") {
+      return "failed";
+    }
+    return "idle";
+  }
+
+  /** 搜索结果：索引查询的限量扁平列表（内置 + 在线合并） */
   function renderSearchResults() {
     if (searchingIndex && searchResults.length === 0) {
       return (
@@ -373,35 +419,24 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
           {t("packSearchResult").replace("{count}", String(searchTotal))}
           {searchTotal > searchResults.length ? ` · ${t("packListCount").replace("{count}", String(searchResults.length))}` : ""}
         </Text>
-        {searchResults.map((device) => {
-          const task = tasks[device.pack];
-          const installed = installedPacks.has(device.pack);
-          const queued = queue.includes(device.pack);
-          let downloadState: DownloadState = "idle";
-          if (task?.status === "done") {
-            downloadState = "done";
-          } else if (task?.status === "downloading") {
-            downloadState = "downloading";
-          } else if (queued) {
-            downloadState = "queued";
-          } else if (task?.status === "failed") {
-            downloadState = "failed";
-          }
-          return (
-            <TreeRow
-              key={device.name}
-              depth={0}
-              label={device.name}
-              badge={device.vendor}
-              selected={selected?.name === device.name}
-              onToggle={() => selectDevice(device, device.vendor, device.family)}
-              installed={installed}
-              builtin={device.builtin}
-              downloadState={downloadState}
-              onDownload={() => enqueueDownload(device.pack)}
-            />
-          );
-        })}
+        {searchResults.map((device) => (
+          <TreeRow
+            key={device.name}
+            depth={0}
+            label={device.name}
+            badge={device.vendor}
+            selected={isCurrent(device) || selected?.name === device.name}
+            onToggle={() => {
+              onSelect(device.target);
+              selectDevice(device, device.vendor, device.family);
+              recordRecent(device);
+            }}
+            installed={installed.has(device.pack)}
+            builtin={device.builtin}
+            downloadState={deviceDownloadState(device)}
+            onDownload={() => enqueueDownload(device.pack)}
+          />
+        ))}
       </>
     );
   }
@@ -414,7 +449,41 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
         </Text>
       );
     }
-    return filteredVendors.map((vendor) => {
+    // 顶部"最近使用"分组（仅在未搜索时显示）
+    const recentBlock = !searching && recentDevices.length > 0 && (
+      <div style={{ marginBottom: 6 }}>
+        <div
+          className="pack-tree-row branch"
+          style={{ paddingLeft: 6, cursor: "default" }}
+        >
+          <span className="tree-icon"><Clock size={13} /></span>
+          <span className="pack-tree-label" style={{ color: "var(--text-muted)", fontSize: 11, fontWeight: 600 }}>
+            {t("recentDevices")}
+          </span>
+          <span className="pack-tree-count">{recentDevices.length}</span>
+        </div>
+        {recentDevices.map((device) => (
+          <TreeRow
+            key={`recent-${device.target}`}
+            depth={1}
+            label={device.name}
+            badge={device.vendor}
+            selected={isCurrent(device) || selected?.name === device.name}
+            onToggle={() => {
+              onSelect(device.target);
+              selectDevice(device, device.vendor, device.family);
+              recordRecent(device);
+            }}
+            installed={installed.has(device.pack)}
+            builtin={device.builtin}
+          />
+        ))}
+      </div>
+    );
+    return (
+      <>
+        {recentBlock}
+        {filteredVendors.map((vendor) => {
       const vendorOpen = searching || expandedVendors.has(vendor.name);
       const vendorCount = vendor.families.reduce((sum, family) => sum + family.devices.length, 0);
       return (
@@ -439,41 +508,32 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
                     onToggle={() => toggleFamily(family.name)}
                   />
                   {familyOpen &&
-                    family.devices.map((device) => {
-                      const task = tasks[device.pack];
-                      const installed = installedPacks.has(device.pack);
-                      const queued = queue.includes(device.pack);
-                      let downloadState: DownloadState = "idle";
-                      if (task?.status === "done") {
-                        downloadState = "done";
-                      } else if (task?.status === "downloading") {
-                        downloadState = "downloading";
-                      } else if (queued) {
-                        downloadState = "queued";
-                      } else if (task?.status === "failed") {
-                        downloadState = "failed";
-                      }
-                      return (
-                        <TreeRow
-                          key={device.name}
-                          depth={2}
-                          label={device.name}
-                          badge={device.builtin ? t("packBuiltin") : undefined}
-                          selected={selected?.name === device.name}
-                          onToggle={() => selectDevice(device, vendor.name, family.name)}
-                          installed={installed}
-                          builtin={device.builtin}
-                          downloadState={downloadState}
-                          onDownload={() => enqueueDownload(device.pack)}
-                        />
-                      );
-                    })}
+                    family.devices.map((device) => (
+                      <TreeRow
+                        key={device.name}
+                        depth={2}
+                        label={device.name}
+                        badge={device.builtin ? t("packBuiltin") : undefined}
+                        selected={isCurrent(device) || selected?.name === device.name}
+                        onToggle={() => {
+                          onSelect(device.target);
+                          selectDevice(device, vendor.name, family.name);
+                          recordRecent(device);
+                        }}
+                        installed={installed.has(device.pack)}
+                        builtin={device.builtin}
+                        downloadState={deviceDownloadState(device)}
+                        onDownload={() => enqueueDownload(device.pack)}
+                      />
+                    ))}
                 </div>
               );
             })}
         </div>
       );
-    });
+    })}
+      </>
+    );
   }
 
   function renderDetail() {
@@ -491,7 +551,11 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
       <>
         <div className="pack-detail-title">
           <span className="device-name">{device.name}</span>
-          {selectedInstalled ? (
+          {isCurrent(device) ? (
+            <Badge color="green" variant="light" leftSection={<Check size={11} />}>
+              {t("deviceSelected")}
+            </Badge>
+          ) : selectedInstalled ? (
             <Badge color="green" variant="light" leftSection={<Check size={11} />}>
               {t("packInstalled")}
             </Badge>
@@ -506,7 +570,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
           )}
         </div>
         <div className="pack-detail-meta">
-          {device.vendor} · {device.family}
+          {device.vendor} · {device.family} · {t("targetLabel")}: {device.target}
         </div>
 
         <div className="pack-detail-props">
@@ -534,7 +598,8 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
           </span>
         </div>
 
-        {!device.builtin && (
+        {/* 未装 DFP 的非内置器件：可直接下载（与下载器一致） */}
+        {!device.builtin && !selectedInstalled && (
           <div className="pack-detail-actions">
             {task?.status === "downloading" ? (
               <div className="install-progress">
@@ -546,15 +611,14 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
             ) : (
               <Button
                 size="sm"
-                leftSection={
-                  selectedInstalled || task?.status === "done" ? <Check size={14} /> : <CloudDownload size={14} />
-                }
+                variant="light"
+                leftSection={task?.status === "done" ? <Check size={14} /> : <CloudDownload size={14} />}
                 onClick={() => enqueueDownload(device.pack)}
-                disabled={selectedInstalled || task?.status === "done" || queue.includes(device.pack)}
-                color={selectedInstalled || task?.status === "done" ? "green" : "blue"}
+                disabled={task?.status === "done" || queue.includes(device.pack)}
+                color={task?.status === "done" ? "green" : "blue"}
                 styles={{ root: { minWidth: 130 } }}
               >
-                {selectedInstalled || task?.status === "done"
+                {task?.status === "done"
                   ? t("packInstalled")
                   : queue.includes(device.pack)
                     ? t("queuedLabel")
@@ -576,7 +640,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
     <Modal
       opened={opened}
       onClose={onClose}
-      title={t("deviceManager")}
+      title={t("deviceSearch")}
       size="xl"
       centered
       styles={{
@@ -592,6 +656,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
             value={query}
             onChange={(event) => setQuery(event.currentTarget.value)}
             leftSection={<Search size={13} />}
+            autoFocus
           />
           <Button size="xs" variant="subtle" leftSection={<RefreshCw size={13} />} onClick={loadTree} loading={loading}>
             {t("refresh")}
@@ -605,7 +670,7 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
         )}
 
         <div className="pack-modal-body">
-          {/* 左：器件树（点器件即入队下载） */}
+          {/* 左：器件树（点器件即选中） */}
           <div className="pack-tree-panel">
             <div className="pack-tree-header">
               <span>{t("devicesTitle")}</span>
@@ -632,15 +697,35 @@ export function PackDownloadModal({ opened, onClose, onInstalled, onLog: _onLog,
         </div>
       </Stack>
 
-      {/* 底部固定状态栏（始终可见）：下载中 / 排队 / 已完成 + 进度 */}
+      {/* 底部固定选择栏（始终可见）：当前选中 + 确认选择 + 下载进度 */}
       <div className="pack-download-bar">
         <Group justify="space-between" align="center" wrap="nowrap">
           <Text fz={12} c="dimmed" className="ellipsis" style={{ flex: 1, minWidth: 0 }}>
-            {t("deviceCount").replace("{count}", String(totalCount))}
+            {selected ? (
+              <>
+                <Text component="span" fw={600} c="var(--text-main)">
+                  {selected.name}
+                </Text>
+                {" · "}
+                {t("targetLabel")}: {selected.target}
+              </>
+            ) : (
+              t("selectDeviceHint")
+            )}
             {activeCount > 0 && ` · ${t("downloading")} ${activeCount}/${MAX_CONCURRENT}`}
             {queue.length > 0 && ` · ${t("queuedLabel")} ${queue.length}`}
-            {doneCount > 0 && ` · ${t("downloadedCount").replace("{count}", String(doneCount))}`}
           </Text>
+          <Button
+            size="sm"
+            leftSection={<Check size={14} />}
+            disabled={!selected}
+            onClick={() => {
+              onClose();
+            }}
+            styles={{ root: { flexShrink: 0 } }}
+          >
+            {t("confirmSelect")}
+          </Button>
         </Group>
 
         {Object.keys(tasks).length > 0 && (

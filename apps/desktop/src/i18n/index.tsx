@@ -190,13 +190,17 @@ const dictionary = {
     ispStep3: "③ 复位芯片进入系统 Bootloader",
     ispHelpLabel: "接线说明",
     device: "器件",
-    deviceSearch: "搜索器件（内置库 + 已装 Pack）",
+    deviceSearch: "选择器件",
+    deviceSelected: "已选择",
+    targetLabel: "烧录目标",
+    confirmSelect: "确认选择",
     deviceBuiltin: "内置",
     deviceDfp: "需装DFP",
     probeGuide: "未检测到烧录器，请插入 USB 调试器（CMSIS-DAP / ST-Link / J-Link）后点击刷新",
     probeScanning: "正在扫描烧录器...",
     probeTypeLabel: "调试器类型",
     probeTypeAuto: "自动",
+    selectProbe: "选择烧录器",
     probeTypeCmsisDap: "CMSIS-DAP",
     probeTypeStlink: "ST-Link",
     probeTypeJlink: "J-Link",
@@ -214,6 +218,14 @@ const dictionary = {
     flashAddress: "烧录起始地址",
     chipErase: "整片擦除",
     verifyAfterFlash: "烧后校验",
+    maxClock: "最大时钟",
+    flashAlgorithm: "烧录算法",
+    algorithmDefault: "默认（{name}）",
+    algorithmNoDfp: "器件未安装 DFP，无算法可选",
+    sectionConnect: "连接",
+    sectionDeviceFirmware: "器件与固件",
+    sectionOptions: "选项",
+    sectionFlash: "烧录",
     startFlash: "开始烧录",
     chipInfo: "芯片信息",
     readChipInfo: "读取",
@@ -221,7 +233,7 @@ const dictionary = {
     flashLog: "烧录日志",
     phaseConnecting: "连接中",
     phaseErase: "擦除中",
-    phaseProgram: "编程中",
+    phaseProgram: "烧录中",
     phaseVerify: "校验中",
     phaseDone: "完成",
     phaseError: "失败",
@@ -276,6 +288,7 @@ const dictionary = {
     packBuiltinHint: "51 系列为内置器件库，烧录走串口 ISP（暂未支持），无需下载 Pack",
     installPack: "安装 Pack",
     packNotInstalled: "未安装",
+    recentDevices: "最近使用",
     selectDeviceHint: "从左侧选择器件，右侧会显示对应器件包，可一键下载安装",
     devicesTitle: "器件",
     deviceCount: "{count} 个器件",
@@ -484,13 +497,17 @@ const dictionary = {
     ispStep3: "3. Reset chip into system bootloader",
     ispHelpLabel: "Wiring",
     device: "Device",
-    deviceSearch: "Search device (builtin + installed packs)",
+    deviceSearch: "Select Device",
+    deviceSelected: "Selected",
+    targetLabel: "Target",
+    confirmSelect: "Confirm",
     deviceBuiltin: "Built-in",
     deviceDfp: "DFP",
     probeGuide: "No probe detected. Plug in a USB debugger (CMSIS-DAP / ST-Link / J-Link) and refresh.",
     probeScanning: "Scanning for probes...",
     probeTypeLabel: "Debugger type",
     probeTypeAuto: "Auto",
+    selectProbe: "Select probe",
     probeTypeCmsisDap: "CMSIS-DAP",
     probeTypeStlink: "ST-Link",
     probeTypeJlink: "J-Link",
@@ -508,6 +525,14 @@ const dictionary = {
     flashAddress: "Start address",
     chipErase: "Chip erase",
     verifyAfterFlash: "Verify",
+    maxClock: "Max clock",
+    flashAlgorithm: "Flash algorithm",
+    algorithmDefault: "Default ({name})",
+    algorithmNoDfp: "No DFP installed for this device",
+    sectionConnect: "Connect",
+    sectionDeviceFirmware: "Device & Firmware",
+    sectionOptions: "Options",
+    sectionFlash: "Flash",
     startFlash: "Flash",
     chipInfo: "Chip info",
     readChipInfo: "Read",
@@ -570,6 +595,7 @@ const dictionary = {
     packBuiltinHint: "8051 devices are built-in (programmed via serial ISP, not yet supported); no pack download needed",
     installPack: "Install Pack",
     packNotInstalled: "Not installed",
+    recentDevices: "Recent",
     selectDeviceHint: "Select a device on the left to view & install its pack",
     devicesTitle: "Devices",
     deviceCount: "{count} devices",
@@ -599,7 +625,7 @@ export type TranslationKey = keyof typeof dictionary.zh;
 interface I18nContextValue {
   language: Language;
   setLanguage: (value: Language) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -626,7 +652,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return {
       language,
       setLanguage: changeLanguage,
-      t: (key) => dictionary[language][key],
+      t: (key, params) => {
+        let text: string = dictionary[language][key];
+        if (params) {
+          for (const [name, value] of Object.entries(params)) {
+            text = text.replace(`{${name}}`, String(value));
+          }
+        }
+        return text;
+      },
     };
   }, [language]);
 

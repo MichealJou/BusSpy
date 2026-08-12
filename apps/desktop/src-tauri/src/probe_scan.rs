@@ -27,10 +27,15 @@ const KNOWN_DEBUGGERS: &[(u16, u16, &str, &str)] = &[
 ];
 
 /// 枚举 USB 调试器，返回与后端 probe.list 同结构的 JSON（毫秒级）。
+///
+/// ⚠️ ST-Link 等调试器在 macOS 上会暴露多个 USB 接口（HID + MSC/CDC），
+/// 同一串号会枚举出多条。这里按串号去重，只保留第一条（烧录用主接口），
+/// 避免前端列表出现重复探针、烧录时选中错误接口。
 pub fn list_usb_probes() -> Result<Value, String> {
     let devices = rusb::devices().map_err(|error| format!("枚举 USB 设备失败：{error}"))?;
 
     let mut probes: Vec<Value> = Vec::new();
+    let mut seen_serials: std::collections::HashSet<String> = std::collections::HashSet::new();
     for device in devices.iter() {
         let descriptor = match device.device_descriptor() {
             Ok(desc) => desc,
@@ -49,6 +54,12 @@ pub fn list_usb_probes() -> Result<Value, String> {
 
         // 读 USB 串号作为 uniqueId（pyOCD 的 unique_id 通常即 USB 串号）
         let serial = read_serial(&device, &descriptor).unwrap_or_default();
+        if !serial.is_empty() {
+            if seen_serials.contains(&serial) {
+                continue; // 同一探针的另一个 USB 接口，跳过
+            }
+            seen_serials.insert(serial.clone());
+        }
 
         probes.push(json!({
             "id": serial,
@@ -63,6 +74,8 @@ pub fn list_usb_probes() -> Result<Value, String> {
 }
 
 /// 读取 USB 串号（iSerialNumber 字符串描述符）。
+/// ⚠️ 部分设备（ATK-HS-V3 实测）返回的字符串末尾带 NUL（\0），
+/// 直接发给 pyOCD 匹配 unique_id 会失败导致连接卡死，必须清理。
 fn read_serial(
     device: &rusb::Device<rusb::GlobalContext>,
     descriptor: &rusb::DeviceDescriptor,
@@ -77,9 +90,10 @@ fn read_serial(
     let language = *languages
         .first()
         .ok_or_else(|| "设备无 USB 语言描述".to_string())?;
-    handle
+    let serial = handle
         .read_serial_number_string(language, descriptor, Duration::from_secs(1))
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    Ok(serial.trim_end_matches('\0').trim().to_string())
 }
 
 #[cfg(test)]
@@ -95,12 +109,16 @@ mod tests {
             let probes = value["probes"].as_array().map(|a| a.len()).unwrap_or(0);
             println!("检测到 {} 个调试器", probes);
             for probe in value["probes"].as_array().unwrap_or(&Vec::new()) {
+                let uid = probe["uniqueId"].as_str().unwrap_or("");
                 println!(
                     "  {} / {} / uniqueId={}",
                     probe["vendor"].as_str().unwrap_or(""),
                     probe["product"].as_str().unwrap_or(""),
-                    probe["uniqueId"].as_str().unwrap_or("")
+                    uid
                 );
+                // 串号不得含 NUL 或首尾空白：pyOCD 匹配 unique_id 会因此卡死
+                assert!(!uid.contains('\0'), "uniqueId 不应含 NUL：{:?}", uid);
+                assert_eq!(uid, uid.trim(), "uniqueId 不应含首尾空白：{:?}", uid);
             }
         }
     }

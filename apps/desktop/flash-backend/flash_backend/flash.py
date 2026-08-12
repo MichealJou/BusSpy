@@ -11,8 +11,11 @@ from typing import Any, Callable
 
 from .rpc import emit, emit_log
 
-# 默认 SWD 时钟频率（2MHz，兼容大部分板载下载器）
-DEFAULT_FREQUENCY = 2_000_000
+# 默认 SWD 时钟频率。
+# ⚠️ 不要设 4MHz：实测 ATK-HS-V3（CMSIS-DAP）在 4MHz 下 Flash 擦除算法执行
+# 会 HardFault（pyOCD FlashFailure IPSR=3），烧录必失败。1MHz 与 pyOCD 默认一致，
+# 对杜邦线/老固件探针最稳。前端 Max Clock 可调高，但默认保持 1MHz。
+DEFAULT_FREQUENCY = 1_000_000
 
 
 def _normalise_progress(value: float) -> int:
@@ -24,31 +27,97 @@ def _normalise_progress(value: float) -> int:
     return max(0, min(100, int(number * 100 if number <= 1 else number)))
 
 
-def _session(probe_id: str, target: str, verify: bool = True, pack: str | None = None):
-    from pyocd.core.helpers import ConnectHelper
+def _normalise_id(value: str) -> str:
+    """归一化探针 ID：去掉前导 0、空格、常见分隔符。
 
-    options: dict[str, Any] = {"frequency": DEFAULT_FREQUENCY, "verify": verify}
-    if pack:
-        options["pack"] = pack
-    session = ConnectHelper.session_with_chosen_probe(
-        unique_id=probe_id,
-        target_override=target,
+    rusb（前端枚举）与 pyOCD（后端连接）对同一探针的 ID 表示可能不同：
+    如 J-Link 串号 rusb 读作 "000020090928"，pyOCD 为 "20090928"。
+    归一化后比较避免匹配失败。
+    """
+    return "".join(ch for ch in value.strip() if ch.isalnum()).lstrip("0")
+
+
+def _probe_id_matches(probe, probe_id: str) -> bool:
+    """判断 pyOCD probe 是否匹配目标 ID（精确 + 归一化两种比较）。"""
+    uid = getattr(probe, "unique_id", None) or ""
+    pid = getattr(probe, "probe_id", None) or ""
+    return (
+        uid == probe_id
+        or pid == probe_id
+        or (_normalise_id(uid) and _normalise_id(uid) == _normalise_id(probe_id))
+        or (_normalise_id(pid) and _normalise_id(pid) == _normalise_id(probe_id))
+    )
+
+
+def _open_session(probe, target: str, options: dict[str, Any]):
+    """用指定 probe 对象建会话并打开（target 必须传入，否则退回 cortex_m）。"""
+    from pyocd.core.session import Session
+
+    session = Session(
+        probe,
+        auto_open=False,
         options=options,
+        target_override=target or None,
     )
     if session is None:
-        raise RuntimeError(f"无法连接烧录器/芯片：{probe_id}")
-    # pyOCD 0.45：session_with_chosen_probe 不再自动打开 session，
-    # 必须显式 open()，否则 target 未初始化（读内存报 "no selected core"、
-    # 烧录/擦除也会失败）
+        raise RuntimeError("无法创建 pyOCD 会话")
     if not session.is_open:
         session.open()
     return session
 
 
-def _auto_detect_target(probe_id: str, pack: str | None = None) -> str:
+def _session(probe_id: str, target: str, verify: bool = True, pack: str | None = None, frequency: int = DEFAULT_FREQUENCY):
+    from pyocd.core.helpers import ConnectHelper
+
+    # ⚠️ 防卡死：先非阻塞枚举探针。pyOCD 的 session_with_chosen_probe 默认
+    # blocking=True，匹配不上会无限循环等待探针插入（前端表现为"一直连接中"）。
+    # 这里提前枚举 + 校验，匹配失败立即抛错，不让 pyOCD 进入等待循环。
+    connected = ConnectHelper.get_all_connected_probes(blocking=False, unique_id=None)
+    if not connected:
+        raise RuntimeError("未检测到烧录器，请检查 USB 连接后刷新")
+
+    options: dict[str, Any] = {"frequency": frequency, "verify": verify}
+    if pack:
+        options["pack"] = pack
+    emit_log(f"[连接] 创建 pyOCD 会话（target={target}，SWD {frequency // 1_000_000}MHz）...")
+
+    # 首选探针：指定的 probe_id；未指定/匹配不上时用全部在线探针作为候选。
+    candidates: list = []
+    if probe_id:
+        emit_log(f"[连接] 检查烧录器 {probe_id} 是否在线...")
+        candidates = [p for p in connected if _probe_id_matches(p, probe_id)]
+        if not candidates:
+            raise RuntimeError(f"未找到烧录器 {probe_id}，请检查连接后刷新")
+        emit_log(f"[连接] 烧录器在线：{probe_id}")
+    else:
+        candidates = list(connected)
+
+    # 依次尝试每个候选探针：前一个连不上（探针硬件问题/接线问题）时自动换下一个。
+    last_error: Exception | None = None
+    for probe in candidates:
+        uid = getattr(probe, "unique_id", None) or getattr(probe, "probe_id", None) or "unknown"
+        emit_log(f"[连接] 尝试烧录器：{uid} ...")
+        try:
+            session = _open_session(probe, target, options)
+            emit_log(f"[连接] 会话就绪：{getattr(session.target, 'part_number', target)}")
+            return session
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            emit_log(f"[连接] 烧录器 {uid} 连接失败（{str(exc)[:60]}），尝试下一个...")
+
+    raise RuntimeError(
+        f"连接目标芯片失败（{last_error}）。请检查："
+        "① SWD 接线（SWDIO/SWCLK/GND 与目标板对应）；"
+        "② 目标板独立供电；"
+        "③ 探针接口电压与芯片匹配；"
+        "④ 芯片是否被读保护（RDP）"
+    ) from last_error
+
+
+def _auto_detect_target(probe_id: str, pack: str | None = None, frequency: int = DEFAULT_FREQUENCY) -> str:
     """按芯片 IDCODE 自动识别 target：连接 → 读 IDCODE → DEVID 查表推断。"""
     try:
-        session = _session(probe_id, None, pack=pack)
+        session = _session(probe_id, None, pack=pack, frequency=frequency)
         try:
             chip_id = session.target.read32(0xE0042000)
             devid = chip_id & 0xFFF
@@ -77,19 +146,41 @@ def _flash_size(target) -> int | None:
     return None
 
 
+def _resolve_probe_id(probe_id: str | None) -> str:
+    """确定要连接的探针 ID。
+
+    - 显式传了 probeId：直接使用
+    - 未传：枚举当前探针，恰好只有一个时自动用它；多个时要求明确选择
+    """
+    if probe_id:
+        return probe_id
+    from pyocd.core.helpers import ConnectHelper
+
+    probes = ConnectHelper.get_all_connected_probes(blocking=False, unique_id=None)
+    if not probes:
+        raise ValueError("未检测到烧录器，请检查 USB 连接后刷新")
+    if len(probes) == 1:
+        uid = getattr(probes[0], "unique_id", None) or getattr(probes[0], "probe_id", None) or ""
+        emit_log(f"[连接] 自动选择唯一烧录器：{uid or 'unknown'}")
+        return uid
+    raise ValueError(f"检测到 {len(probes)} 个烧录器，请在界面选择要使用的烧录器")
+
+
 def program(params: dict[str, Any] | None = None) -> dict[str, Any]:
     """烧录固件：连接 → 擦除 → 编程 → 校验。"""
     params = params or {}
-    probe_id = params.get("probeId")
+    probe_id = _resolve_probe_id(params.get("probeId"))
     target = params.get("target") or ""
     file_path = params.get("filePath")
     erase_mode = params.get("eraseMode", "auto")
     verify = params.get("verify", True)
     pack = params.get("pack")
     address = params.get("address")
+    frequency = int(params.get("frequency", DEFAULT_FREQUENCY))
+    algorithm = params.get("algorithm") or ""
 
-    if not probe_id or not file_path:
-        raise ValueError("缺少烧录参数（probeId/filePath）")
+    if not file_path:
+        raise ValueError("缺少烧录参数（filePath）")
 
     # target 为空时按芯片 ID 自动识别（DEVID → target 推断）
     if not target:
@@ -97,7 +188,9 @@ def program(params: dict[str, Any] | None = None) -> dict[str, Any]:
         emit_log(f"自动识别芯片型号：{target}")
 
     emit_log(f"连接烧录器：{probe_id}，目标芯片：{target}")
-    session = _session(probe_id, target, verify=verify, pack=pack)
+    if algorithm:
+        emit_log(f"[烧录] 烧录算法：{algorithm}（前端指定）")
+    session = _session(probe_id, target, verify=verify, pack=pack, frequency=frequency)
     try:
         from pyocd.flash.file_programmer import FileProgrammer
 
@@ -108,26 +201,39 @@ def program(params: dict[str, Any] | None = None) -> dict[str, Any]:
             chip_erase=chip_erase,
         )
         if address:
+            emit_log(f"[烧录] 固件：{file_path}（地址 0x{int(address):X}）")
             programmer.add_file(file_path, address=int(address))
         else:
+            emit_log(f"[烧录] 固件：{file_path}")
             programmer.add_file(file_path)
-        emit_log("开始编程...")
+        emit_log(f"[烧录] 开始编程（擦除模式：{chip_erase}）...")
         programmer.commit()
         if verify:
-            emit_log("烧录完成，校验通过")
+            emit_log("[烧录] 校验通过，烧录完成")
+        else:
+            emit_log("[烧录] 烧录完成（未校验）")
+
+        # ⚠️ 烧录后必须复位运行：pyOCD 编程时把 core halt 住了，commit 结束不复位，
+        # 芯片会停在 halt 状态 —— 表现为"烧录成功但设备没反应"。
+        try:
+            emit_log("[烧录] 复位芯片，启动固件...")
+            session.target.reset_and_halt()
+            session.target.resume()
+            emit_log("[烧录] 芯片已复位运行")
+        except Exception as exc:  # noqa: BLE001
+            emit_log(f"[烧录] 复位运行失败（{exc}），可手动按复位键")
         return {"ok": True, "verified": verify}
     finally:
         session.close()
+        emit_log("[烧录] 会话已释放")
 
 
 def erase(params: dict[str, Any] | None = None) -> dict[str, Any]:
     """整片擦除（chip erase）。"""
     params = params or {}
-    probe_id = params.get("probeId")
+    probe_id = _resolve_probe_id(params.get("probeId"))
     target = params.get("target") or ""
     pack = params.get("pack")
-    if not probe_id:
-        raise ValueError("缺少擦除参数（probeId）")
     if not target:
         target = _auto_detect_target(probe_id, pack)
         emit_log(f"自动识别芯片型号：{target}")
@@ -152,7 +258,7 @@ STM32_DEVID_TARGETS: dict[int, str] = {
     0x410: "stm32f103rc",  # F1 medium-density（内置可用）
     0x411: "stm32f103rc",  # F1 high-density
     0x412: "stm32f103rc",  # F1 connectivity（F105/F107）
-    0x413: "stm32f103rc",  # F1 low-density
+    0x413: "stm32f407zg",  # F40x/41x（含 F407ZG）
     0x418: "stm32f103rc",  # F1 XL-density
     0x420: "stm32f205rg",  # F2（需 DFP）
     0x421: "stm32f207zg",  # F2（需 DFP）
@@ -195,11 +301,9 @@ def chip_info(params: dict[str, Any] | None = None) -> dict[str, Any]:
     Flash/RAM，返回 suggestedTarget 供前端自动选择器件）。
     """
     params = params or {}
-    probe_id = params.get("probeId")
+    probe_id = _resolve_probe_id(params.get("probeId"))
     target = params.get("target") or ""
     pack = params.get("pack")
-    if not probe_id:
-        raise ValueError("缺少芯片信息参数（probeId）")
 
     # 第一段：连接（有 target 用指定，无则 generic 自动识别，读 IDCODE）
     session = _session(probe_id, target or None, pack=pack)
@@ -221,15 +325,19 @@ def chip_info(params: dict[str, Any] | None = None) -> dict[str, Any]:
         except Exception:  # noqa: BLE001
             info["coreId"] = None
 
-        # UID：常见 STM32 位置（F1/F2/F3/F4/F7 等为 0x1FFFF7E8）
+        # UID：不同系列地址不同，且部分探针读某些地址会 SWD fault。
+        # 按"F4+ (0x1FFF7A10) → F1/F2/F3/F7 (0x1FFFF7E8) → 老 F1 (0x1FFF7590)"顺序尝试；
+        # 读取成功且非全 0 才算有效（避免拿到错误的空值提前退出）。
         info["uid"] = []
-        for uid_address in (0x1FFFF7E8, 0x1FFF7590, 0x1FFF7A10):
+        for uid_address in (0x1FFF7A10, 0x1FFFF7E8, 0x1FFF7590):
             try:
                 uid_words = chip.read_memory_block32(uid_address, 3)
-                info["uid"] = [f"{word:08X}" for word in uid_words]
-                break
+                words = [f"{word:08X}" for word in uid_words]
             except Exception:  # noqa: BLE001
                 continue
+            if any(word != "00000000" for word in words):
+                info["uid"] = words
+                break
 
         info["target"] = getattr(chip, "part_number", None) or target or "自动识别"
         info["flashSize"] = _flash_size(chip)

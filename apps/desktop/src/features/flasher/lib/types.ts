@@ -1,4 +1,5 @@
 import type {
+  FlashAlgorithm,
   FlashBackendStatus,
   FlashChipInfo,
   FlashDependencyStatus,
@@ -57,6 +58,10 @@ export interface FlasherState {
   packs: FlashPackInfo[];
   /** 已选器件（device target 名） */
   selectedTarget: string | null;
+  /** 已选器件的烧录算法列表（Keil 同源，来自已装 DFP） */
+  algorithms: FlashAlgorithm[];
+  /** 已选烧录算法名（null=用器件默认算法） */
+  selectedAlgorithm: string | null;
   /** 已选固件文件路径 */
   firmwarePath: string | null;
   /** 连接方式：SWD 烧录器 / 串口 ISP */
@@ -65,6 +70,10 @@ export interface FlasherState {
   probeType: ProbeType;
   /** 按 probeType 过滤后的探针列表 */
   visibleProbes: FlashProbeInfo[];
+  /** 当前生效的探针（已选或自动取第一个） */
+  selectedProbe?: FlashProbeInfo;
+  /** 已选探针（uniqueId/id；null=自动取第一个） */
+  selectedProbeId: string | null;
   /** 串口列表（ISP 用） */
   serialPorts: string[];
   /** 已选串口（ISP 用） */
@@ -73,6 +82,8 @@ export interface FlasherState {
   baudRate: number;
   /** 烧录地址（自动/手动） */
   flashAddress: number | null;
+  /** SWD 时钟频率（Hz） */
+  swdFrequency: number;
   /** 整片擦除开关 */
   chipErase: boolean;
   /** 烧后校验开关 */
@@ -99,6 +110,8 @@ export interface FlasherState {
   /** 读取到的当前 SN */
   currentSn: string | null;
   snValid: boolean | null;
+  /** SN 读取警告（如地址落在固件代码区导致乱码） */
+  snWarning: string | null;
   /** 量产模式 */
   productionRunning: boolean;
   productionStats: ProductionStats;
@@ -117,12 +130,15 @@ export interface FlasherActions {
   refreshSerialPorts: () => Promise<void>;
   bootstrap: (mirror: string) => Promise<void>;
   setSelectedTarget: (target: string | null) => void;
+  setSelectedAlgorithm: (algorithm: string | null) => void;
   setFirmwarePath: (path: string | null) => void;
   setConnectionMode: (mode: ConnectionMode) => void;
   setProbeType: (type: ProbeType) => void;
+  setSelectedProbeId: (id: string | null) => void;
   setSelectedPort: (port: string | null) => void;
   setBaudRate: (rate: number) => void;
   setFlashAddress: (address: number | null) => void;
+  setSwdFrequency: (freq: number) => void;
   setChipErase: (value: boolean) => void;
   setVerifyAfterFlash: (value: boolean) => void;
   setSnConfig: (patch: Partial<SnConfig>) => void;
@@ -155,7 +171,9 @@ export function isDependencyReady(dep: FlashDependencyStatus | null): boolean {
 }
 
 export const DEFAULT_SN_CONFIG: SnConfig = {
-  address: 0x0800f000,
+  // SN 存 Flash 末尾（最后一个扇区，远离固件代码区）。默认 0x0800F000 会
+  // 与较大固件重叠（固件代码被当 SN 读出 → 乱码），故用末尾地址。
+  address: 0x080ff000,
   format: "ascii",
   endian: "little",
   checksum: "none",
@@ -164,7 +182,7 @@ export const DEFAULT_SN_CONFIG: SnConfig = {
 
 export const DEFAULT_PRODUCTION_CONFIG: ProductionConfig = {
   snEnabled: false,
-  snAddress: 0x0800f000,
+  snAddress: 0x080ff000,
   snFormat: "ascii",
   snLength: 32,
   snChecksum: "none",

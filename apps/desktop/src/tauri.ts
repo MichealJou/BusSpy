@@ -206,6 +206,10 @@ export interface FlashProgramOptions {
   verify: boolean;
   pack?: string | null;
   address?: number | null;
+  /** SWD 时钟（Hz），缺省后端用 1MHz */
+  frequency?: number | null;
+  /** 显式指定的烧录算法名（如 STM32F4xx_1024.FLM），缺省用器件默认 */
+  algorithm?: string | null;
 }
 
 export interface SnOptions {
@@ -309,6 +313,8 @@ export interface PackCategory {
 
 export interface DeviceInfo {
   name: string;
+  /** pyOCD target 名（在线器件=DFP 器件名；内置器件=内置库 target，如 STM32F407ZG） */
+  target: string;
   vendor: string;
   family: string;
   flashKb: number | null;
@@ -348,6 +354,27 @@ export async function flashDownloadPack(pack: string): Promise<unknown> {
   return invoke("flash_download_pack", { pack });
 }
 
+/** 器件烧录算法（Keil Programming Algorithm 同源） */
+export interface FlashAlgorithm {
+  name: string;
+  path: string;
+  address: number;
+  sizeKb: number;
+  /** 是否该器件默认算法 */
+  default: boolean;
+}
+
+export interface FlashAlgorithmsResult {
+  device: string;
+  algorithms: FlashAlgorithm[];
+  /** 默认算法（Keil 自动带出的那个），可能为空（DFP 未装） */
+  default: FlashAlgorithm | null;
+}
+
+export async function flashListAlgorithms(device: string): Promise<FlashAlgorithmsResult> {
+  return invoke("flash_list_algorithms", { device });
+}
+
 export async function flashProgram(options: FlashProgramOptions): Promise<{ ok: boolean; verified: boolean }> {
   return invoke("flash_program", { options });
 }
@@ -360,7 +387,7 @@ export async function flashReadChipInfo(probeId: string, target: string, pack?: 
   return invoke("flash_read_chip_info", { probeId, target, pack: pack ?? null });
 }
 
-export async function flashReadSn(options: SnOptions): Promise<{ value: string; raw: number[]; valid: boolean }> {
+export async function flashReadSn(options: SnOptions): Promise<{ value: string; raw: number[]; valid: boolean; garbled?: boolean; warning?: string | null }> {
   return invoke("flash_read_sn", { options });
 }
 

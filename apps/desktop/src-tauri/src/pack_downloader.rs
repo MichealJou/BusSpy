@@ -358,6 +358,7 @@ pub fn device_tree() -> Result<Value, String> {
             let pack_vendor = from_pack.get("vendor").and_then(|v| v.as_str()).unwrap_or("");
             let device = json!({
                 "name": name,
+                "target": name, // 在线器件：DFP 器件名即 pyOCD target 名（装 DFP 后可解析）
                 "vendor": vendor,
                 "family": family,
                 "flashKb": default_flash_kb(descriptor),
@@ -381,6 +382,7 @@ pub fn device_tree() -> Result<Value, String> {
         .map(|(name, _)| {
             json!({
                 "name": name,
+                "target": name,
                 "vendor": "8051",
                 "family": "8051 Series",
                 "flashKb": 8,
@@ -396,6 +398,41 @@ pub fn device_tree() -> Result<Value, String> {
             .entry("8051".to_string())
             .or_default()
             .insert("8051 Series".to_string(), mcs51);
+    }
+
+    // 内置 STM32 / GD32 器件库：合并进对应厂商节点（内置 target 直接可烧，无需 DFP）
+    let mut builtin_by_vendor: BTreeMap<String, BTreeMap<String, Vec<Value>>> = BTreeMap::new();
+    for mut device in builtin_devices() {
+        let vendor = device
+            .get("vendor")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let family = device
+            .get("family")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Other Series")
+            .to_string();
+        device["builtin"] = json!(true);
+        builtin_by_vendor
+            .entry(vendor)
+            .or_default()
+            .entry(family)
+            .or_default()
+            .push(device);
+    }
+    // 内置器件合并进已有厂商节点（同一 family 下：内置排前，避免和在线同名器件混淆）
+    for (vendor, families) in builtin_by_vendor {
+        let target_families = vendors.entry(vendor.clone()).or_default();
+        for (family, mut devices) in families {
+            let slot = target_families.entry(family).or_default();
+            for device in &devices {
+                slot.retain(|existing| {
+                    existing.get("name").and_then(|v| v.as_str()) != device.get("name").and_then(|v| v.as_str())
+                });
+            }
+            slot.splice(0..0, devices.drain(..));
+        }
     }
 
     let vendors_json: Vec<Value> = vendors
@@ -423,10 +460,52 @@ const GITHUB_PROXIES: &[&str] = &[
     "https://mirror.ghproxy.com/",
 ];
 
-/// 搜索器件（统一索引查询，毫秒级）。
+/// 内置器件库路径（与 Python 端 targets.py 同源）：
+/// `<flash-backend>/devices/devices.json`
+fn builtin_devices_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../flash-backend")
+        .join("devices")
+        .join("devices.json")
+}
+
+/// 读取内置器件库（devices.json，常用 STM32 / GD32，target 名 pyOCD 内置可解析）。
+/// 读取失败返回空列表（不影响在线索引搜索）。
+fn builtin_devices() -> Vec<Value> {
+    let Ok(raw) = fs::read_to_string(builtin_devices_path()) else {
+        return Vec::new();
+    };
+    let devices: Vec<Value> = serde_json::from_str(&raw).unwrap_or_default();
+    devices
+        .into_iter()
+        .map(|mut device| {
+            // 内置器件无 pack / version / vendor：补占位字段，前端 DeviceInfo 不缺字段
+            if device.get("vendor").and_then(|v| v.as_str()).unwrap_or("").is_empty() {
+                let name = device.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let vendor = if name.to_uppercase().starts_with("GD") {
+                    "GigaDevice"
+                } else {
+                    "STMicroelectronics"
+                };
+                device["vendor"] = json!(vendor);
+            }
+            if !device.get("pack").is_some() {
+                device["pack"] = device.get("name").cloned().unwrap_or(Value::Null);
+            }
+            if !device.get("version").is_some() {
+                device["version"] = Value::Null;
+            }
+            device
+        })
+        .collect()
+}
+
+/// 搜索器件（统一索引查询 + 内置器件库合并，毫秒级）。
 ///
 /// 在内存缓存的 index.json 索引上按器件名匹配，返回**限量**扁平结果
 /// （最多 100 条），避免前端展开整棵大树的 DOM 爆炸卡顿。
+/// 内置 devices.json（STM32 / GD32 常用型号，target 名 pyOCD 内置可解析）优先返回，
+/// 保证"不用装 DFP 也能选到直接可烧的器件"。
 pub fn search_devices(query: &str) -> Result<Value, String> {
     let query = query.trim();
     if query.is_empty() {
@@ -437,8 +516,27 @@ pub fn search_devices(query: &str) -> Result<Value, String> {
 
     let mut results: Vec<Value> = Vec::new();
     let mut total: usize = 0;
+
+    // 1) 内置器件库优先（离线可用，target 直接可烧）
+    let mut seen_names: BTreeSet<String> = BTreeSet::new();
+    for device in builtin_devices() {
+        let name = device.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        if name.is_empty() || !name.to_lowercase().contains(&q) {
+            continue;
+        }
+        total += 1;
+        seen_names.insert(name.to_string());
+        if results.len() < 100 {
+            results.push(device);
+        }
+    }
+
+    // 2) 在线索引（DFP 器件，需装 Pack 后 pyOCD 才可解析）
     if let Value::Object(descriptors) = &index {
         for (name, descriptor) in descriptors {
+            if seen_names.contains(name) {
+                continue; // 内置已有同名器件（如 STM32F407ZGT6），不重复
+            }
             if !name.to_lowercase().contains(&q) {
                 continue;
             }
@@ -473,6 +571,7 @@ pub fn search_devices(query: &str) -> Result<Value, String> {
             let vendor = if chip_vendor.is_empty() { pack_vendor } else { chip_vendor };
             results.push(json!({
                 "name": name,
+                "target": name, // 在线器件：DFP 器件名即 pyOCD target 名（装 DFP 后可解析）
                 "vendor": vendor,
                 "family": descriptor.get("family").and_then(|v| v.as_str()).unwrap_or(""),
                 "flashKb": default_flash_kb(descriptor),
@@ -709,6 +808,36 @@ mod tests {
         assert_eq!(total, 0);
         assert!(results.is_empty());
         assert!(packs.is_empty());
+    }
+
+    #[test]
+    fn builtin_devices_merge_provides_target() {
+        // 内置库读取成功（devices.json 存在）
+        let builtin = builtin_devices();
+        assert!(!builtin.is_empty(), "内置器件库不应为空");
+        let f407 = builtin
+            .iter()
+            .find(|d| d["name"] == "STM32F407ZGT6")
+            .expect("内置库应包含 STM32F407ZGT6");
+        assert_eq!(f407["target"], "STM32F407ZG", "内置 target 应为 pyOCD 可解析名");
+        assert_eq!(f407["builtin"], true);
+        assert!(!f407["pack"].is_null(), "内置器件需补 pack 占位字段");
+    }
+
+    #[test]
+    fn search_merges_builtin_first_with_target() {
+        // 真实索引 + 内置库合并：搜 STM32F407 应命中内置 STM32F407ZGT6 且排前
+        let value = search_devices("STM32F407").unwrap_or_else(|e| panic!("搜索失败: {e}"));
+        let results = value["results"].as_array().expect("results 应为数组");
+        let f407_builtin = results.iter().find(|d| d["name"] == "STM32F407ZGT6");
+        assert!(f407_builtin.is_some(), "搜索应命中内置 STM32F407ZGT6");
+        let item = f407_builtin.expect("存在");
+        assert_eq!(item["target"], "STM32F407ZG", "内置器件 target 应可解析");
+        assert_eq!(item["builtin"], true);
+        // 在线器件应带 target=器件名
+        if let Some(first) = results.first() {
+            assert!(!first["target"].as_str().unwrap_or("").is_empty(), "每条结果都应有 target");
+        }
     }
 
     #[test]

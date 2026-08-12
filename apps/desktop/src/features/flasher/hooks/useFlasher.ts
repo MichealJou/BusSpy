@@ -6,6 +6,7 @@ import {
   flashBootstrap,
   flashErase,
   flashImportPack,
+  flashListAlgorithms,
   flashListPacks,
   flashListProbes,
   flashListTargets,
@@ -51,14 +52,19 @@ export function useFlasher(): FlasherStore {
   const [probes, setProbes] = useState<FlasherStore["probes"]>([]);
   const [targets, setTargets] = useState<FlasherStore["targets"]>([]);
   const [packs, setPacks] = useState<FlasherStore["packs"]>([]);
-  const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
+  const [selectedTarget, setSelectedTargetState] = useState<string | null>(null);
+  const [algorithms, setAlgorithms] = useState<FlasherStore["algorithms"]>([]);
+  const [selectedAlgorithm, setSelectedAlgorithmState] = useState<string | null>(null);
   const [firmwarePath, setFirmwarePath] = useState<string | null>(null);
   const [connectionMode, setConnectionModeState] = useState<FlasherStore["connectionMode"]>("swd");
   const [probeType, setProbeTypeState] = useState<ProbeType>("auto");
+  const [selectedProbeId, setSelectedProbeIdState] = useState<string | null>(null);
   const [serialPorts, setSerialPorts] = useState<string[]>([]);
   const [selectedPort, setSelectedPortState] = useState<string | null>(null);
   const [baudRate, setBaudRate] = useState(115200);
   const [flashAddress, setFlashAddress] = useState<number | null>(0x08000000);
+  // SWD 时钟默认 1MHz（与 pyOCD 默认一致，最稳；4MHz 实测 ATK-HS-V3 Flash 擦除会 HardFault）
+  const [swdFrequency, setSwdFrequency] = useState(1_000_000);
   const [chipErase, setChipErase] = useState(false);
   const [verifyAfterFlash, setVerifyAfterFlash] = useState(true);
   const [run, setRun] = useState(emptyRun);
@@ -75,6 +81,7 @@ export function useFlasher(): FlasherStore {
   const [snConfig, setSnConfigState] = useState(DEFAULT_SN_CONFIG);
   const [currentSn, setCurrentSn] = useState<string | null>(null);
   const [snValid, setSnValid] = useState<boolean | null>(null);
+  const [snWarning, setSnWarning] = useState<string | null>(null);
   const [productionConfig, setProductionConfigState] = useState<ProductionConfig>(DEFAULT_PRODUCTION_CONFIG);
   const [productionRunning, setProductionRunning] = useState(false);
   const [productionStats, setProductionStats] = useState<ProductionStats>({ total: 0, ok: 0, fail: 0 });
@@ -113,6 +120,10 @@ export function useFlasher(): FlasherStore {
   chipEraseRef.current = chipErase;
   const verifyRef = useRef(true);
   verifyRef.current = verifyAfterFlash;
+  const swdFrequencyRef = useRef(1_000_000);
+  swdFrequencyRef.current = swdFrequency;
+  const algorithmRef = useRef<string | null>(null);
+  algorithmRef.current = selectedAlgorithm;
   const snConfigRef = useRef(DEFAULT_SN_CONFIG);
   snConfigRef.current = snConfig;
 
@@ -124,12 +135,41 @@ export function useFlasher(): FlasherStore {
     setProductionConfigState((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  // 选择器件：更新选中 + 自动拉取该器件的烧录算法列表（Keil 同源）
+  const setSelectedTarget: FlasherStore["setSelectedTarget"] = useCallback(async (target) => {
+    setSelectedTargetState(target);
+    setSelectedAlgorithmState(null);
+    if (!target) {
+      setAlgorithms([]);
+      return;
+    }
+    try {
+      const result = await flashListAlgorithms(target);
+      setAlgorithms(result.algorithms ?? []);
+    } catch {
+      setAlgorithms([]);
+    }
+  }, []);
+
+  const setSelectedAlgorithm: FlasherStore["setSelectedAlgorithm"] = useCallback((algorithm) => {
+    setSelectedAlgorithmState(algorithm);
+  }, []);
+
   const setConnectionMode: FlasherStore["setConnectionMode"] = useCallback((mode) => {
     setConnectionModeState(mode);
   }, []);
 
+  // 切换探针类型时自动重扫的引用（在 refreshProbes 定义后赋值，见下方）
+  const refreshProbesRef = useRef<() => Promise<void>>(async () => {});
   const setProbeType: FlasherStore["setProbeType"] = useCallback((type) => {
     setProbeTypeState(type);
+    // 切换探针类型后自动重新扫描：用户插入/更换烧录器后，切到对应类型
+    // 应立即能看到连接状态（不用手动点刷新）
+    void refreshProbesRef.current();
+  }, []);
+
+  const setSelectedProbeId: FlasherStore["setSelectedProbeId"] = useCallback((id) => {
+    setSelectedProbeIdState(id);
   }, []);
 
   // 按调试器类型过滤后的探针列表
@@ -140,9 +180,27 @@ export function useFlasher(): FlasherStore {
     return probes.filter((probe) => classifyProbe(probe) === probeType);
   }, [probes, probeType]);
 
+  // 探针列表变化后：若已选探针不存在（拔掉/被过滤），自动清空选择
+  useEffect(() => {
+    if (!selectedProbeId) return;
+    const exists = visibleProbes.some(
+      (p) => (p.uniqueId || p.id) === selectedProbeId,
+    );
+    if (!exists) {
+      setSelectedProbeIdState(null);
+    }
+  }, [visibleProbes, selectedProbeId]);
+
   const setSelectedPort: FlasherStore["setSelectedPort"] = useCallback((port) => {
     setSelectedPortState(port);
   }, []);
+
+  // 当前选中的探针（无选择时自动取第一个有唯一 ID 的）
+  const selectedProbe = useMemo(() => {
+    const target = visibleProbes.find((p) => (p.uniqueId || p.id) === selectedProbeId);
+    if (target) return target;
+    return visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
+  }, [visibleProbes, selectedProbeId]);
 
   const checkEnvironment = useCallback(async () => {
     setChecking(true);
@@ -172,6 +230,9 @@ export function useFlasher(): FlasherStore {
       setRefreshing(false);
     }
   }, []);
+
+  // 供 setProbeType 切换时自动重扫
+  refreshProbesRef.current = refreshProbes;
 
   // 探针连接后自动读取芯片信息（无需先选器件，按 ID 自动识别）
   useEffect(() => {
@@ -255,11 +316,8 @@ export function useFlasher(): FlasherStore {
 
   // ── 烧录 ────────────────────────────────────────────────
   const flash = useCallback(async () => {
-    const target = selectedRef.current;
-    if (!target) {
-      setError("请先选择器件");
-      return;
-    }
+    // target 可为空：后端按芯片 IDCODE 自动识别
+    const target = selectedRef.current ?? "";
     const pack = (() => {
       // 器件不是内置 pyOCD target 时，用已安装 Pack（后端自动从索引解析，无需显式传）
       return null;
@@ -288,7 +346,7 @@ export function useFlasher(): FlasherStore {
         }
         return;
       }
-      const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
+      const probe = selectedProbe;
       if (!probe) {
         throw new Error("未检测到烧录器");
       }
@@ -300,6 +358,8 @@ export function useFlasher(): FlasherStore {
         verify: verifyRef.current,
         pack,
         address: addressRef.current,
+        frequency: swdFrequencyRef.current,
+        algorithm: algorithmRef.current,
       });
       setRun({
         running: false,
@@ -313,13 +373,13 @@ export function useFlasher(): FlasherStore {
       setRun({ running: false, phase: "error", pct: 0, success: false, message: String(err), startedAt: 0 });
       setFlashLogs((prev) => [...prev, `烧录失败：${String(err)}`]);
     }
-  }, [visibleProbes, firmwarePath, serialPorts]);
+  }, [selectedProbe, firmwarePath, serialPorts]);
 
   const erase = useCallback(async () => {
-    const target = selectedRef.current;
-    const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
-    if (!target || !probe) {
-      setError("请先选择器件并连接烧录器");
+    const target = selectedRef.current ?? "";
+    const probe = selectedProbe;
+    if (!probe) {
+      setError("请先连接烧录器");
       return;
     }
     setRun({ running: true, phase: "erase", pct: 0, success: null, message: "", startedAt: Date.now() });
@@ -329,10 +389,10 @@ export function useFlasher(): FlasherStore {
     } catch (err) {
       setRun({ running: false, phase: "error", pct: 0, success: false, message: String(err), startedAt: 0 });
     }
-  }, [visibleProbes]);
+  }, [selectedProbe]);
 
   const readChipInfo = useCallback(async () => {
-    const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
+    const probe = selectedProbe;
     if (!probe) {
       setError("请先连接烧录器");
       return;
@@ -352,12 +412,12 @@ export function useFlasher(): FlasherStore {
     } finally {
       setChipInfoLoading(false);
     }
-  }, [visibleProbes]);
+  }, [selectedProbe]);
 
   // ── SN ─────────────────────────────────────────────────
   const readSn = useCallback(async () => {
     const target = selectedRef.current;
-    const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
+    const probe = selectedProbe;
     if (!target || !probe) {
       setError("请先选择器件并连接烧录器");
       return;
@@ -375,14 +435,15 @@ export function useFlasher(): FlasherStore {
       });
       setCurrentSn(result.value);
       setSnValid(result.valid);
+      setSnWarning(result.warning ?? null);
     } catch (err) {
       setError(`读取 SN 失败：${String(err)}`);
     }
-  }, [visibleProbes]);
+  }, [selectedProbe]);
 
   const writeSn = useCallback(async (value: string) => {
     const target = selectedRef.current;
-    const probe = visibleProbes.find((item) => item.uniqueId) ?? visibleProbes[0];
+    const probe = selectedProbe;
     if (!target || !probe) {
       setError("请先选择器件并连接烧录器");
       return false;
@@ -406,7 +467,7 @@ export function useFlasher(): FlasherStore {
       setError(`写入 SN 失败：${String(err)}`);
       return false;
     }
-  }, [visibleProbes]);
+  }, [selectedProbe]);
 
   // ── 量产 ────────────────────────────────────────────────
   const productionStart = useCallback(async () => {
@@ -555,15 +616,22 @@ export function useFlasher(): FlasherStore {
     probeType,
     setProbeType,
     visibleProbes,
+    selectedProbe,
+    selectedProbeId,
+    setSelectedProbeId,
     targets,
     packs,
     selectedTarget,
+    algorithms,
+    selectedAlgorithm,
+    setSelectedAlgorithm,
     firmwarePath,
     connectionMode,
     serialPorts,
     selectedPort,
     baudRate,
     flashAddress,
+    swdFrequency,
     chipErase,
     verifyAfterFlash,
     run,
@@ -580,6 +648,7 @@ export function useFlasher(): FlasherStore {
     snConfig,
     currentSn,
     snValid,
+    snWarning,
     productionRunning,
     productionStats,
     productionRecords,
@@ -597,6 +666,7 @@ export function useFlasher(): FlasherStore {
     setSelectedPort,
     setBaudRate,
     setFlashAddress,
+  setSwdFrequency,
     setChipErase,
     setVerifyAfterFlash,
     setSnConfig,

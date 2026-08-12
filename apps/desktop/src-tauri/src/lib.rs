@@ -900,6 +900,7 @@ pub fn run() {
             flasher::flash_device_tree,
             flasher::flash_search_devices,
             flasher::flash_download_pack,
+            flasher::flash_list_algorithms,
             flasher::flash_program,
             flasher::flash_erase,
             flasher::flash_read_chip_info,

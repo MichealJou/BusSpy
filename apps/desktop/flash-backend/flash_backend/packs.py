@@ -111,6 +111,130 @@ def _version_key(version: str) -> tuple[int, ...]:
         return (0,)
 
 
+# ── 烧录算法（Keil Programming Algorithm 同源数据） ────────────────────────
+
+def _algorithms_for_device(device_name: str) -> list[dict[str, Any]]:
+    """在已装 DFP 中查找某器件的烧录算法列表（默认算法优先）。
+
+    数据源：各 Pack 内 .pdsc 的 <algorithm name= start= size= default=1/> 节点，
+    与 Keil 的 Programming Algorithm 完全同源。返回按 default 排序：
+      [{name, address, sizeKb, default}, ...]
+    """
+    try:
+        cache = _cache()
+        _ensure_index(cache)
+        data_dir = Path(cache.data_path)
+    except Exception:  # noqa: BLE001
+        return []
+    if not data_dir.is_dir():
+        return []
+
+    import zipfile
+
+    results: list[dict[str, Any]] = []
+    # 扫描数据目录下的 .pack 文件（扁平 + 子目录布局）
+    pack_files = list(data_dir.glob("*.pack")) + list(data_dir.glob("*/*/*.pack"))
+    for pack_file in pack_files:
+        try:
+            with zipfile.ZipFile(pack_file) as archive:
+                pdsc_name = next(
+                    (name for name in archive.namelist() if name.endswith(".pdsc")),
+                    None,
+                )
+                if pdsc_name is None:
+                    continue
+                content = archive.read(pdsc_name).decode("utf-8", errors="ignore")
+        except Exception:  # noqa: BLE001
+            continue
+
+        # 定位该器件的 <device Dname="XXX"> ... </device> 块。
+        # Dname 可能是完整型号（STM32F407ZGT6 / STM32F407ZGTx）或家族名（STM32F407ZG），
+        # 而前端传入的是 target 名（形态不一），因此做归一化匹配：
+        #   - 忽略大小写
+        #   - 生成候选：原始名 / 去封装尾缀名（去掉尾部 "T6"/"x"/数字，如 ZGT6→ZG、ZGTx→ZG）
+        # 任一候选命中即认为该器件。
+        normalized = device_name.upper()
+        candidates = {normalized}
+        # STM32F407ZGT6 / STM32F407ZGTx → STM32F407ZG（去掉尾部 T6/Tx/x/数字）
+        stripped = re.sub(r"(?:T[0-9X]|[0-9X])+$", "", normalized)
+        if stripped and stripped != normalized:
+            candidates.add(stripped)
+        # STM32F407ZGT6 → STM32F407ZGT（再去一层：去尾部任意数字/字母）
+        stripped2 = re.sub(r"[0-9A-Z]+$", "", stripped)
+        if stripped2 and stripped2 != stripped:
+            candidates.add(stripped2)
+
+        block: str | None = None
+        # 先做一次全量 Dname 扫描，支持模糊匹配（避免正则二次扫描）
+        for dname_match in re.finditer(r'<device\s+Dname="([^"]+)"\s*>.*?</device>', content, re.DOTALL):
+            dname = dname_match.group(1).upper()
+            if dname in candidates:
+                block = dname_match.group(0)
+                break
+            # 双向子串/前缀兜底：STM32F407ZG vs STM32F407ZGT6
+            if any(
+                (cand in dname and len(cand) >= len(dname) - 3)
+                or (dname in cand and len(dname) >= len(cand) - 3)
+                for cand in candidates
+            ):
+                block = dname_match.group(0)
+                break
+        if block is None:
+            continue
+
+        # 提取块内所有 <algorithm>，解析 default 标记
+        alg_pattern = re.compile(
+            r'<algorithm\s+name="([^"]+)"\s+start="([^"]+)"\s+size="([^"]+)"(?:\s+default="([^"]*)")?'
+        )
+        for alg_match in alg_pattern.finditer(block):
+            name, start, size, default = alg_match.groups()
+            try:
+                address = int(start, 16)
+                size_kb = int(int(size, 16) / 1024)
+            except ValueError:
+                continue
+            is_default = str(default or "").strip() in ("1", "true")
+            results.append(
+                {
+                    "name": name.rsplit("/", 1)[-1],  # 只保留文件名，如 STM32F4xx_1024.FLM
+                    "path": name,
+                    "address": address,
+                    "sizeKb": size_kb,
+                    "default": is_default,
+                }
+            )
+
+    # 去重（多 Pack 可能重复定义），默认算法排前
+    seen: set[tuple[str, int]] = set()
+    unique: list[dict[str, Any]] = []
+    for item in results:
+        key = (item["name"], item["address"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    unique.sort(key=lambda item: (not item["default"], item["name"].lower()))
+    return unique
+
+
+def list_algorithms(params: dict[str, Any] | None = None) -> dict[str, Any]:
+    """查询某器件的烧录算法列表（Keil Programming Algorithm 同源）。
+
+    返回 [{name, address, sizeKb, default}]；default=True 的是该器件
+    默认算法（Keil 自动带出的那个）。
+    """
+    params = params or {}
+    device_name = params.get("device", "").strip()
+    if not device_name:
+        raise ValueError("缺少器件型号（device）")
+    algorithms = _algorithms_for_device(device_name)
+    return {
+        "device": device_name,
+        "algorithms": algorithms,
+        "default": next((a for a in algorithms if a["default"]), None),
+    }
+
+
 def import_pack(params: dict[str, Any] | None = None) -> dict[str, Any]:
     """导入本地官方 Pack（.pack 文件），安装后器件库自动扩展。"""
     params = params or {}

@@ -45,7 +45,7 @@
     "family": "GD32F3",
     "flashKb": 256,
     "ramKb": 40,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "GD32F303VET6",
@@ -53,7 +53,7 @@
     "family": "GD32F3",
     "flashKb": 512,
     "ramKb": 64,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "GD32F330C8T6",
@@ -117,7 +117,7 @@
     "family": "STM32F0",
     "flashKb": 64,
     "ramKb": 8,
-    "builtin": true
+    "builtin": false
   },
   {
     "name": "STM32F051R8",
@@ -269,7 +269,7 @@
     "family": "STM32F4",
     "flashKb": 256,
     "ramKb": 64,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F401RCT6",
@@ -277,7 +277,7 @@
     "family": "STM32F4",
     "flashKb": 256,
     "ramKb": 64,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F401RET6",
@@ -285,7 +285,7 @@
     "family": "STM32F4",
     "flashKb": 512,
     "ramKb": 96,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F405RGT6",
@@ -293,7 +293,7 @@
     "family": "STM32F4",
     "flashKb": 1024,
     "ramKb": 192,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F407IGT6",
@@ -301,7 +301,7 @@
     "family": "STM32F4",
     "flashKb": 1024,
     "ramKb": 192,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F407VET6",
@@ -309,7 +309,7 @@
     "family": "STM32F4",
     "flashKb": 512,
     "ramKb": 192,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F407VGT6",
@@ -317,7 +317,7 @@
     "family": "STM32F4",
     "flashKb": 1024,
     "ramKb": 192,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F407ZET6",
@@ -325,7 +325,7 @@
     "family": "STM32F4",
     "flashKb": 512,
     "ramKb": 192,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F407ZGT6",
@@ -333,7 +333,7 @@
     "family": "STM32F4",
     "flashKb": 1024,
     "ramKb": 192,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F411CEU6",
@@ -341,7 +341,7 @@
     "family": "STM32F4",
     "flashKb": 512,
     "ramKb": 128,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F411RET6",
@@ -349,7 +349,7 @@
     "family": "STM32F4",
     "flashKb": 512,
     "ramKb": 128,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F412RET6",
@@ -373,7 +373,7 @@
     "family": "STM32F4",
     "flashKb": 1024,
     "ramKb": 256,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F429ZIT6",
@@ -397,7 +397,7 @@
     "family": "STM32F4",
     "flashKb": 512,
     "ramKb": 128,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F446ZET6",
@@ -405,7 +405,7 @@
     "family": "STM32F4",
     "flashKb": 512,
     "ramKb": 128,
-    "builtin": false
+    "builtin": true
   },
   {
     "name": "STM32F722RET6",

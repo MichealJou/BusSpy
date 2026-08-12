@@ -80,6 +80,12 @@ export function SnToolPanel({ state }: SnToolPanelProps) {
           </Group>
         )}
 
+        {state.snWarning && (
+          <Alert color="yellow" variant="light" p="sm" mb={8}>
+            <Text fz={12}>{state.snWarning}</Text>
+          </Alert>
+        )}
+
         <Text fz={13} fw={500} mb={6}>
           {t("snModify")}
         </Text>

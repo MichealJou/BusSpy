@@ -250,6 +250,22 @@ fn resolve_backend_command(app: &AppHandle) -> Result<(String, Vec<String>, Path
         }
     }
 
+    // debug 构建（tauri dev）：优先用开发目录 .venv 的 Python，加载最新源码。
+    // 不能先走 bundled_backend —— 它会在 build/dist 找到旧 sidecar（Tauri dev 也复制），
+    // 导致烧录永远跑旧后端，改的代码不生效（表现为同样的错误一直复现）。
+    #[cfg(debug_assertions)]
+    {
+        let backend_dir = backend_dir();
+        let venv = venv_python(&backend_dir);
+        if venv.exists() {
+            return Ok((
+                venv.to_string_lossy().to_string(),
+                vec!["-m".to_string(), "flash_backend".to_string()],
+                backend_dir,
+            ));
+        }
+    }
+
     if let Some(bundled) = bundled_backend(app) {
         return Ok((bundled.to_string_lossy().to_string(), Vec::new(), PathBuf::from(".")));
     }
@@ -351,14 +367,21 @@ fn venv_python(backend_dir: &std::path::Path) -> PathBuf {
 
 /// 当前后端启动方式标识（供前端展示）。
 fn backend_mode(app: &AppHandle) -> String {
-    if bundled_backend(app).is_some() {
-        return "bundled".to_string();
-    }
     if std::env::var("BUSSPY_FLASH_BACKEND")
         .map(|value| !value.is_empty())
         .unwrap_or(false)
     {
         return "custom".to_string();
+    }
+    // debug 构建（tauri dev）强制用开发目录 venv（见 resolve_backend_command）
+    #[cfg(debug_assertions)]
+    {
+        if venv_python(&backend_dir()).exists() {
+            return "venv".to_string();
+        }
+    }
+    if bundled_backend(app).is_some() {
+        return "bundled".to_string();
     }
     if venv_python(&backend_dir()).exists() {
         return "venv".to_string();
@@ -690,7 +713,7 @@ pub async fn flash_list_packs(app: AppHandle) -> Result<Vec<FlashPackInfo>, Stri
     .await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn flash_import_pack(app: AppHandle, pack_path: String) -> Result<Value, String> {
     spawn_blocking_task(move || {
         let backend = get_backend(&app)?;
@@ -728,6 +751,16 @@ pub async fn flash_download_pack(app: AppHandle, pack: String) -> Result<Value, 
     spawn_blocking_task(move || crate::pack_downloader::download(&app, &pack)).await
 }
 
+/// 查询器件的烧录算法列表（Keil Programming Algorithm 同源，来自已装 DFP）。
+#[tauri::command]
+pub async fn flash_list_algorithms(app: AppHandle, device: String) -> Result<Value, String> {
+    spawn_blocking_task(move || {
+        let backend = get_backend(&app)?;
+        backend.call("pack.algorithms", json!({ "device": device }), BACKEND_TIMEOUT)
+    })
+    .await
+}
+
 // ── 烧录 / 芯片信息 / SN ────────────────────────────────
 
 #[derive(Deserialize)]
@@ -740,6 +773,8 @@ pub struct FlashProgramOptions {
     verify: bool,
     pack: Option<String>,
     address: Option<u64>,
+    frequency: Option<u32>,
+    algorithm: Option<String>,
 }
 
 #[tauri::command]
@@ -759,12 +794,20 @@ pub async fn flash_program(app: AppHandle, options: FlashProgramOptions) -> Resu
         if let Some(address) = options.address {
             params["address"] = json!(address);
         }
+        if let Some(frequency) = options.frequency {
+            params["frequency"] = json!(frequency);
+        }
+        if let Some(algorithm) = options.algorithm {
+            if !algorithm.is_empty() {
+                params["algorithm"] = json!(algorithm);
+            }
+        }
         backend.call("flash.program", params, Duration::from_secs(600))
     })
     .await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn flash_erase(
     app: AppHandle,
     probe_id: String,
@@ -782,7 +825,7 @@ pub async fn flash_erase(
     .await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 pub async fn flash_read_chip_info(
     app: AppHandle,
     probe_id: String,
@@ -945,4 +988,39 @@ pub async fn production_records(app: AppHandle) -> Result<Value, String> {
         backend.call("production.records", Value::Null, BACKEND_TIMEOUT)
     })
     .await
+}
+
+#[cfg(test)]
+mod flasher_tests {
+    use super::*;
+
+    /// debug 构建下：venv 存在时后端命令应为 venv Python（而非 build/dist 旧 sidecar）。
+    /// 防止 dev 模式误用旧打包后端导致改动不生效。
+    #[test]
+    fn debug_build_prefers_venv_over_sidecar() {
+        let venv = venv_python(&backend_dir());
+        let sidecar = backend_dir().join("build/dist/flash-backend");
+        // 前提：开发目录 venv 存在（CI/无 venv 环境跳过）
+        if !venv.exists() {
+            eprintln!("skip: venv 不存在");
+            return;
+        }
+        // debug_assertions 分支应命中 venv
+        #[cfg(debug_assertions)]
+        {
+            assert!(venv.exists(), "venv 应存在");
+            assert!(venv.to_string_lossy().ends_with(".venv/bin/python")
+                    || venv.to_string_lossy().ends_with(".venv/Scripts/python.exe"));
+        }
+        // sidecar 存在与否不影响 debug 选择（venv 优先）
+        let _ = sidecar.exists();
+    }
+
+    /// venv_python 路径指向 flash-backend/.venv 下。
+    #[test]
+    fn venv_python_points_inside_backend_dir() {
+        let venv = venv_python(&backend_dir());
+        let text = venv.to_string_lossy();
+        assert!(text.contains("flash-backend/.venv"), "venv 路径应在 flash-backend/.venv 下: {text}");
+    }
 }

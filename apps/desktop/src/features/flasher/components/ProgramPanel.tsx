@@ -14,6 +14,8 @@ import {
 import {
   CircleCheck,
   CircleX,
+  ChevronDown,
+  ChevronRight,
   CloudDownload,
   Cpu,
   FolderOpen,
@@ -25,6 +27,7 @@ import { getAppPaths, pickFile } from "../../../tauri";
 import { useI18n } from "../../../i18n";
 import type { FlasherStore, ProbeType } from "../lib/types";
 import { PackDownloadModal } from "./PackDownloadModal";
+import { DevicePickerModal } from "./DevicePickerModal";
 
 interface ProgramPanelProps {
   state: FlasherStore;
@@ -34,12 +37,19 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
   const { t } = useI18n();
 
   const [packDownloaderOpened, setPackDownloaderOpened] = useState(false);
+  const [devicePickerOpened, setDevicePickerOpened] = useState(false);
+  // 烧录日志默认收起（不遮挡页面）；烧录中/出错误时自动展开
+  const [logsOpen, setLogsOpen] = useState(false);
+
+  const running = state.run.running;
+  // 烧录中或刚失败时自动展开日志，方便看过程
+  const showLogsExpanded = logsOpen || running || state.run.success === false;
+  const hasLogs = state.flashLogs.length > 0;
 
   const envReady = Boolean(state.status?.ready);
-  const probe = state.visibleProbes.find((item) => item.uniqueId) ?? state.visibleProbes[0];
+  const probe = state.selectedProbe;
   const canFlash = envReady && Boolean(state.selectedTarget) && Boolean(state.firmwarePath);
   const canChip = envReady && Boolean(probe);
-  const running = state.run.running;
   const isSwd = state.connectionMode === "swd";
 
   const deviceOptions = useMemo(() => {
@@ -81,14 +91,22 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
         onLog={state.pushFlashLog}
         state={state}
       />
+      <DevicePickerModal
+        opened={devicePickerOpened}
+        onClose={() => setDevicePickerOpened(false)}
+        selectedTarget={state.selectedTarget}
+        onSelect={(target) => state.setSelectedTarget(target)}
+        installedPacks={state.packs.map((p) => p.name)}
+        onInstalled={async () => { await Promise.all([state.loadPacks(), state.loadTargets()]); }}
+      />
 
       {/* ── 烧录卡片（一个白色卡片，内部分区，紧凑有层次） ── */}
       <section className="flasher-card">
         <Stack gap={16}>
           {/* 连接 */}
           <div className="prog-section">
-          <div className="prog-section-title">CONNECT</div>
-          <Group gap={10} wrap="nowrap" align="center">
+          <div className="prog-section-title">{t("sectionConnect")}</div>
+          <Group gap={10} wrap="wrap" align="center">
             <SegmentedControl
               size="xs"
               value={state.connectionMode}
@@ -110,9 +128,24 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
                   ]}
                   allowDeselect={false}
                 />
-                <Text fz={13} className="ellipsis" style={{ flex: 1, minWidth: 0, color: probe ? "#2f9e44" : "var(--text-muted)" }}>
-                  {state.refreshing ? "⏳ 扫描中..." : probe ? `● ${probe.product || probe.uniqueId}` : "○ 未连接"}
-                </Text>
+                {state.visibleProbes.length > 1 ? (
+                  <Select
+                    size="xs"
+                    style={{ flex: 1, minWidth: 0 }}
+                    value={state.selectedProbeId ?? state.visibleProbes[0]?.uniqueId ?? null}
+                    onChange={(value) => state.setSelectedProbeId(value ?? null)}
+                    placeholder={t("selectProbe")}
+                    data={state.visibleProbes.map((item) => ({
+                      value: item.uniqueId || item.id,
+                      label: `${item.product || item.vendor}${item.uniqueId ? ` (${item.uniqueId})` : ""}`,
+                    }))}
+                    allowDeselect={false}
+                  />
+                ) : (
+                  <Text fz={13} className="ellipsis" style={{ flex: 1, minWidth: 0, color: probe ? "#2f9e44" : "var(--text-muted)" }}>
+                    {state.refreshing ? "⏳ 扫描中..." : probe ? `● ${probe.product || probe.uniqueId || probe.id}` : "○ 未连接"}
+                  </Text>
+                )}
                 <Button size="compact-xs" variant="subtle" leftSection={<RefreshCw size={12} />} onClick={() => void state.refreshProbes()} loading={state.refreshing}>
                   {t("refresh")}
                 </Button>
@@ -142,28 +175,27 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
 
           {/* 器件 + 固件 */}
           <div className="prog-section">
-          <div className="prog-section-title">DEVICE &amp; FIRMWARE</div>
-          <Group gap={12} wrap="nowrap" align="flex-end">
-            <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
+          <div className="prog-section-title">{t("sectionDeviceFirmware")}</div>
+          <Group gap={12} wrap="wrap" align="flex-end">
+            <Stack gap={4} style={{ flex: 1, minWidth: 240 }}>
               <Text fz={12} fw={600}>{t("device")}</Text>
               <Group gap={6} wrap="nowrap">
-                <Select
+                <Button
                   size="xs"
-                  style={{ flex: 1 }}
-                  placeholder={t("deviceSearch")}
-                  value={state.selectedTarget}
-                  onChange={(value) => state.setSelectedTarget(value ?? null)}
-                  data={deviceOptions}
-                  searchable
-                  maxDropdownHeight={200}
-                  nothingFoundMessage={t("noDeviceFound")}
-                />
+                  variant="default"
+                  onClick={() => setDevicePickerOpened(true)}
+                  style={{ flex: 1, justifyContent: "flex-start" }}
+                >
+                  {state.selectedTarget
+                    ? `${deviceOptions.flatMap((g) => g.items).find((i) => i.value === state.selectedTarget)?.label || state.selectedTarget}`
+                    : t("deviceSearch")}
+                </Button>
                 <Button size="compact-xs" variant="light" leftSection={<CloudDownload size={11} />} onClick={() => setPackDownloaderOpened(true)}>
                   {t("deviceManager")}
                 </Button>
               </Group>
             </Stack>
-            <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
+            <Stack gap={4} style={{ flex: 1, minWidth: 240 }}>
               <Text fz={12} fw={600}>{t("firmware")}</Text>
               {state.firmwarePath ? (
                 <Group gap={6} wrap="nowrap">
@@ -185,7 +217,7 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
 
           {/* 选项 */}
           <div className="prog-section">
-          <div className="prog-section-title">OPTIONS</div>
+          <div className="prog-section-title">{t("sectionOptions")}</div>
           <Group gap={16} wrap="wrap" align="flex-end">
             <Checkbox size="xs" label={t("chipErase")} checked={state.chipErase} onChange={(e) => state.setChipErase(e.currentTarget.checked)} />
             <Checkbox size="xs" label={t("verifyAfterFlash")} checked={state.verifyAfterFlash} onChange={(e) => state.setVerifyAfterFlash(e.currentTarget.checked)} />
@@ -202,12 +234,48 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
                 style={{ width: 120, fontSize: 13, fontFamily: "monospace", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, outline: "none" }}
               />
             </Stack>
+            <Stack gap={2}>
+              <Text fz={11} c="dimmed">{t("maxClock")}</Text>
+              <select
+                value={state.swdFrequency}
+                onChange={(e) => state.setSwdFrequency(Number(e.target.value))}
+                style={{ width: 90, fontSize: 13, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, outline: "none", cursor: "pointer" }}
+              >
+                <option value={1000000}>1 MHz</option>
+                <option value={2000000}>2 MHz</option>
+                <option value={4000000}>4 MHz</option>
+                <option value={8000000}>8 MHz</option>
+                <option value={10000000}>10 MHz</option>
+              </select>
+            </Stack>
+            <Stack gap={2}>
+              <Text fz={11} c="dimmed">{t("flashAlgorithm")}</Text>
+              {state.algorithms.length > 0 ? (
+                <select
+                  value={state.selectedAlgorithm ?? ""}
+                  onChange={(e) => state.setSelectedAlgorithm(e.target.value || null)}
+                  style={{ width: 210, fontSize: 12, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, outline: "none", cursor: "pointer" }}
+                >
+                  <option value="">
+                    {t("algorithmDefault", { name: state.algorithms.find((a) => a.default)?.name ?? state.algorithms[0]?.name ?? t("probeTypeAuto") })}
+                  </option>
+                  {state.algorithms.map((a) => (
+                    <option key={`${a.name}-${a.address}`} value={a.name}>
+                      {a.name} {a.sizeKb > 0 ? `(${a.sizeKb}KB @ 0x${a.address.toString(16).toUpperCase()})` : ""}
+                      {a.default ? " · 默认" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Text fz={11} c="dimmed">{t("algorithmNoDfp")}</Text>
+              )}
+            </Stack>
           </Group>
           </div>
 
           {/* 操作按钮 */}
           <div className="prog-section">
-          <div className="prog-section-title">FLASH</div>
+          <div className="prog-section-title">{t("sectionFlash")}</div>
           <Group gap={10} wrap="wrap">
             <Button
               leftSection={running ? <Loader size={16} /> : <Play size={16} />}
@@ -225,14 +293,6 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
               {t("readChipInfo")}
             </Button>
           </Group>
-
-          {/* 进度 */}
-          {running && (
-            <Stack gap={4}>
-              <Progress value={state.run.pct} size="md" striped animated />
-              <Text fz={12} c="dimmed">{phaseLabel} {state.run.pct}%</Text>
-            </Stack>
-          )}
           </div>
 
           {state.run.success === true && (
@@ -247,21 +307,35 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
             <Group gap={16} wrap="wrap" style={{ fontSize: 12, color: "var(--text-muted)" }}>
               <span>{state.chipInfo.target}</span>
               {state.chipInfo.flashSize && <span>Flash: {Math.round(state.chipInfo.flashSize / 1024)}KB</span>}
-              {state.chipInfo.chipId && <span>ID: {state.chipInfo.chipId}</span>}
-              {state.chipInfo.uid.length > 0 && <span>UID: {state.chipInfo.uid.join("")}</span>}
+              {state.chipInfo.chipId && <span>设备ID: {state.chipInfo.chipId}</span>}
+              {state.chipInfo.uid.some((w) => w !== "00000000") && <span>UID: {state.chipInfo.uid.join(" ")}</span>}
             </Group>
           )}
         </Stack>
       </section>
 
-      {/* 日志（卡片外，底部） */}
-      {state.flashLogs.length > 0 && (
-        <div>
-          <Group justify="space-between" mb={4}>
-            <Text fz={12} fw={600}>{t("flashLog")}</Text>
-            <Button size="compact-xs" variant="subtle" onClick={state.clearFlashLogs}>{t("clear")}</Button>
+      {/* 日志（卡片外，底部；默认收起不遮挡，点标题展开） */}
+      {hasLogs && (
+        <div className="flash-log-panel">
+          <Group justify="space-between" align="center" mb={0} wrap="nowrap">
+            <Button
+              size="compact-xs"
+              variant="subtle"
+              leftSection={showLogsExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+              onClick={() => setLogsOpen((prev) => !prev)}
+              styles={{ root: { color: "var(--text-muted)" } }}
+            >
+              {t("flashLog")} ({state.flashLogs.length})
+            </Button>
+            {showLogsExpanded && (
+              <Button size="compact-xs" variant="subtle" onClick={state.clearFlashLogs}>
+                {t("clear")}
+              </Button>
+            )}
           </Group>
-          <pre className="bootstrap-log" style={{ maxHeight: 120 }}>{state.flashLogs.join("\n")}</pre>
+          {showLogsExpanded && (
+            <pre className="bootstrap-log" style={{ maxHeight: 160 }}>{state.flashLogs.join("\n")}</pre>
+          )}
         </div>
       )}
 
@@ -269,6 +343,17 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
         <Alert color="red" variant="light" p="sm">
           <Text fz={12}>{state.error}</Text>
         </Alert>
+      )}
+
+      {/* 烧录进度（页面最底部固定栏，与下载器底部进度同风格） */}
+      {running && (
+        <div className="flash-progress-bar">
+          <Group justify="space-between" align="center" wrap="nowrap" mb={6}>
+            <Text fz={12} fw={600}>{phaseLabel || t("startFlash")}</Text>
+            <Text fz={12} c="dimmed">{state.run.pct}%</Text>
+          </Group>
+          <Progress value={state.run.pct} size="md" striped animated />
+        </div>
       )}
     </div>
   );

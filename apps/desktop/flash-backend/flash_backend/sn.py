@@ -148,7 +148,39 @@ def read(params: dict[str, Any] | None = None) -> dict[str, Any]:
     try:
         raw = session.target.read_memory_block8(address, data_len)
         result = decode_sn(bytes(raw), fmt, endian, checksum)
-        emit_log(f"SN 读取成功：{result['value']}" + ("" if result["valid"] else "（校验不符！）"))
+
+        # ⚠️ 乱码检测：地址落在固件代码区时，读到的是一堆不可打印字节。
+        # 提示用户检查地址，避免把机器码当 SN。
+        # 判断依据：取首个空字节/结尾前的内容段，若该段可打印比例高则正常，
+        # 否则（整段几乎都是不可打印字节）判定为乱码（可能是固件代码）。
+        if fmt == "ascii":
+            # 取开头到第一个 0x00 / 0xFF（字符串结束）的有效段
+            end = len(raw)
+            for i, b in enumerate(raw):
+                if b in (0x00, 0xFF):
+                    end = i
+                    break
+            head = raw[:end]
+            if head:
+                printable = sum(1 for b in head if 32 <= b < 127)
+                ratio = printable / len(head)
+            else:
+                ratio = 0.0
+            if ratio < 0.8:
+                result["garbled"] = True
+                result["warning"] = (
+                    f"该地址内容不像文本（可打印字符仅 {ratio*100:.0f}%），"
+                    "可能不是 SN 存储区而是固件代码。请检查 SN 地址是否正确。"
+                )
+                emit_log(f"⚠️ 读取内容疑似乱码：{result['warning']}")
+            else:
+                result["garbled"] = False
+                result["warning"] = None
+                emit_log(f"SN 读取成功：{result['value']}" + ("" if result["valid"] else "（校验不符！）"))
+        else:
+            result["garbled"] = False
+            result["warning"] = None
+            emit_log(f"SN 读取成功：{result['value']}" + ("" if result["valid"] else "（校验不符！）"))
         return result
     finally:
         session.close()
