@@ -44,11 +44,15 @@ export function SnToolPanel({ state }: SnToolPanelProps) {
     if (!newValue.trim()) {
       return;
     }
+    setReadError(null);
     setWriting(true);
-    const ok = await state.writeSn(newValue.trim());
+    const err = await state.writeSn(newValue.trim());
     setWriting(false);
-    if (ok) {
+    if (!err) {
       setNewValue("");
+    } else {
+      // 写 SN 失败：把错误显示在当前页面
+      setReadError(err);
     }
   }
 

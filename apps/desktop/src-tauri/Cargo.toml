@@ -24,3 +24,4 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls", "gzip"] }
 dirs = "5"
 rusb = "0.9"
+probe-rs = "0.31.0"

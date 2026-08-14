@@ -12,7 +12,7 @@ import uuid
 from typing import Any
 
 from .probes import list_probes
-from .rpc import emit, emit_log
+from .rpc import HARDWARE_LOCK, emit, emit_log
 
 # 已识别过一轮的探针集合，用于检测新插板
 _state: dict[str, Any] = {
@@ -51,25 +51,28 @@ def _flash_board(config: dict[str, Any], probe: dict[str, Any]) -> dict[str, Any
             "verify": config.get("verify", True),
             "pack": config.get("pack"),
         }
-        program(flash_params)
-        message = "烧录成功"
+        # 单块板「烧录 + 写 SN」作为一个整体持硬件锁，与手动烧录/读芯片互斥，
+        # 避免量产线程与 RPC 并发访问同一探针（互踢 → SIGTRAP）。
+        with HARDWARE_LOCK:
+            program(flash_params)
+            message = "烧录成功"
 
-        if config.get("snEnabled"):
-            sn_value = _next_sn(config)
-            sn_params = {
-                "probeId": probe.get("uniqueId"),
-                "target": config["target"],
-                "pack": config.get("pack"),
-                "address": config.get("snAddress", 0),
-                "format": config.get("snFormat", "ascii"),
-                "endian": config.get("snEndian", "little"),
-                "checksum": config.get("snChecksum", "none"),
-                "length": config.get("snLength"),
-                "value": sn_value,
-            }
-            sn_write(sn_params)
-            record["sn"] = sn_value
-            message += f"，SN={sn_value}"
+            if config.get("snEnabled"):
+                sn_value = _next_sn(config)
+                sn_params = {
+                    "probeId": probe.get("uniqueId"),
+                    "target": config["target"],
+                    "pack": config.get("pack"),
+                    "address": config.get("snAddress", 0),
+                    "format": config.get("snFormat", "ascii"),
+                    "endian": config.get("snEndian", "little"),
+                    "checksum": config.get("snChecksum", "none"),
+                    "length": config.get("snLength"),
+                    "value": sn_value,
+                }
+                sn_write(sn_params)
+                record["sn"] = sn_value
+                message += f"，SN={sn_value}"
 
         record["ok"] = True
         record["message"] = message
@@ -92,7 +95,8 @@ def _worker(config: dict[str, Any]) -> None:
     emit_log("量产模式已启动：插入板卡后自动烧录")
     while not _state["stop_flag"].is_set():
         try:
-            result = list_probes({})
+            with HARDWARE_LOCK:
+                result = list_probes({})
             probes = result.get("probes", [])
         except Exception:  # noqa: BLE001
             probes = []
@@ -130,6 +134,9 @@ def start(params: dict[str, Any] | None = None) -> dict[str, Any]:
             raise ValueError(f"量产配置缺少 {key}")
     if _state["running"]:
         return {"started": True}
+    # 上一次 stop 未真正收尾（worker 阻塞在子进程烧录中，最多 600s）：拒绝重入
+    if _state["thread"] and _state["thread"].is_alive():
+        raise RuntimeError("上次量产仍在收尾，请稍后重试")
 
     _state["config"] = dict(params)
     _state["stop_flag"].clear()

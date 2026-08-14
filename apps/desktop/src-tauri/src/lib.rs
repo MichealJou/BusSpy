@@ -17,6 +17,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 mod flasher;
 mod pack_downloader;
+mod probe_flash;
 mod probe_scan;
 
 #[derive(Serialize)]
@@ -731,6 +732,10 @@ fn parse_hex_bytes(input: &str) -> Result<Vec<u8>, String> {
     let compact: String = input.chars().filter(|ch| !ch.is_whitespace()).collect();
     if compact.is_empty() {
         return Ok(Vec::new());
+    }
+    // 只允许 ASCII 十六进制字符：多字节字符（中文等）按字节切片会越界 panic
+    if !compact.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("HEX 数据包含非法字符（仅支持 0-9 / a-f / A-F）".to_string());
     }
     if compact.len() % 2 != 0 {
         return Err("HEX 数据长度必须是偶数".to_string());

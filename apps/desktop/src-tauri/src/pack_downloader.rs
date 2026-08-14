@@ -630,6 +630,19 @@ pub fn download(app: &AppHandle, pack_name: &str) -> Result<Value, String> {
     let (url, vendor, pack, version) =
         found.ok_or_else(|| format!("索引中未找到 Pack：{pack_name}"))?;
 
+    // 校验索引字段为安全路径段，防止被污染的索引文件通过 .. / 绝对路径写出数据目录
+    let safe_segment = |segment: &str| {
+        !segment.is_empty()
+            && segment != "."
+            && segment != ".."
+            && !segment.contains('/')
+            && !segment.contains('\\')
+            && !segment.contains(':')
+    };
+    if !safe_segment(&vendor) || !safe_segment(&pack) {
+        return Err(format!("索引中 Pack 路径非法：{pack_name}"));
+    }
+
     let file_name = format!("{vendor}.{pack}.{version}.pack");
     let download_url = format!("{}/{}", url.trim_end_matches('/'), file_name);
 

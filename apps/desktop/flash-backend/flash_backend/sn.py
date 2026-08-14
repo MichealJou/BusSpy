@@ -209,9 +209,13 @@ def write(params: dict[str, Any] | None = None) -> dict[str, Any]:
         # 不用 FileProgrammer：它对非固件区地址（如 0x080FF000）可能报参数错误
         from pyocd.flash.loader import FlashLoader
 
-        loader = FlashLoader(session, chip_erase=False, keep_unwritten=True)
+        # SN 存在固件之外的独立扇区，扇区擦除 + 编程即可。
+        # 注意 chip_erase 必须是 "auto"/"sector"/"chip" 之一，不能传布尔 False。
+        loader = FlashLoader(session, chip_erase="sector", keep_unwritten=False)
         loader.add_data(address, data)
+        emit_log("[SN] 开始擦除扇区并写入...")
         loader.commit()
+        emit_log("[SN] 写入完成，开始回读校验...")
 
         # 回读校验
         raw = session.target.read_memory_block8(address, len(data))

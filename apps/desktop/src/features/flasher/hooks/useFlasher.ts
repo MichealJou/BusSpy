@@ -408,6 +408,26 @@ export function useFlasher(): FlasherStore {
       if (info.suggestedTarget && !selectedRef.current) {
         setSelectedTarget(info.suggestedTarget);
       }
+      // 读芯片后自动读 SN（如果有），显示在单烧页芯片信息区
+      const snTarget = selectedRef.current || info.suggestedTarget;
+      if (snTarget) {
+        try {
+          const snResult = await flashReadSn({
+            probeId: probe.uniqueId || probe.id,
+            target: snTarget,
+            address: snConfigRef.current.address,
+            format: snConfigRef.current.format,
+            endian: snConfigRef.current.endian,
+            checksum: snConfigRef.current.checksum,
+            length: snConfigRef.current.length,
+          });
+          setCurrentSn(snResult.value);
+          setSnValid(snResult.valid);
+          setSnWarning(snResult.warning ?? null);
+        } catch {
+          // 读 SN 失败（如未写 SN）不阻塞芯片信息显示
+        }
+      }
     } catch (err) {
       setError(`读取芯片信息失败：${String(err)}`);
     } finally {
@@ -445,12 +465,13 @@ export function useFlasher(): FlasherStore {
     }
   }, [selectedProbe]);
 
-  const writeSn = useCallback(async (value: string) => {
+  const writeSn = useCallback(async (value: string): Promise<string | null> => {
     const target = selectedRef.current;
     const probe = selectedProbe;
     if (!target || !probe) {
-      setError("请先选择器件并连接烧录器");
-      return false;
+      const msg = "请先选择器件并连接烧录器";
+      setError(msg);
+      return msg;
     }
     setError(null);
     try {
@@ -466,10 +487,11 @@ export function useFlasher(): FlasherStore {
       });
       setCurrentSn(result.value);
       setSnValid(result.valid);
-      return result.ok;
+      return result.ok ? null : "SN 写入返回失败";
     } catch (err) {
-      setError(`写入 SN 失败：${String(err)}`);
-      return false;
+      const msg = `写入 SN 失败：${String(err)}`;
+      setError(msg);
+      return msg;
     }
   }, [selectedProbe]);
 

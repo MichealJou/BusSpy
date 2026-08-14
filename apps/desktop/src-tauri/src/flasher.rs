@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     io::{BufRead, BufReader, Write},
     path::PathBuf,
     process::{Child, ChildStdin, Command, Stdio},
@@ -72,6 +72,30 @@ struct FlasherBackend {
 #[derive(Default)]
 pub struct FlasherState {
     backend: Mutex<Option<Arc<FlasherBackend>>>,
+    /// probe-rs 打不开的探针 ID（回退 pyOCD，避免每次烧录都重复尝试并残留句柄）
+    probe_rs_incompatible: Mutex<HashSet<String>>,
+}
+
+/// 尝试用 probe-rs 打开探针做快速烧录。
+/// 失败（探针不兼容 / 不在白名单）则记录到缓存并返回 None，调用方回退 pyOCD。
+fn try_probe_rs_open(app: &AppHandle, target: &str, probe_id: &str) -> Option<probe_rs::Session> {
+    let state = app.state::<FlasherState>();
+    // 已判定为不兼容：直接回退，不再尝试
+    if let Ok(cache) = state.probe_rs_incompatible.lock() {
+        if cache.contains(probe_id) {
+            return None;
+        }
+    }
+    match crate::probe_flash::try_open(target, probe_id) {
+        Ok(session) => Some(session),
+        Err(_) => {
+            // 记住这个探针不走 probe-rs，后续直接 pyOCD
+            if let Ok(mut cache) = state.probe_rs_incompatible.lock() {
+                cache.insert(probe_id.to_string());
+            }
+            None
+        }
+    }
 }
 
 /// 获取（或懒启动）烧录后端；进程已退出时自动重建。
@@ -531,7 +555,13 @@ pub async fn flash_bootstrap(app: AppHandle, mirror: Option<String>) -> Result<(
 
         let backend_dir_path = backend_dir();
         let venv_path = venv_python(&backend_dir_path);
-        let venv_dir = venv_path.parent().unwrap_or(&backend_dir_path).to_path_buf();
+        // venv_path = <backend>/.venv/bin/python（或 .venv/Scripts/python.exe）
+        // venv 根目录要再往上走一级：<backend>/.venv
+        let venv_dir = venv_path
+            .parent()
+            .and_then(|p| p.parent())
+            .unwrap_or(&backend_dir_path)
+            .to_path_buf();
         // 创建 venv 的 Python：用候选白名单（避免 macOS 系统自带 3.9）
         let python = find_python()
             .map(|path| path.to_string_lossy().to_string())
@@ -629,6 +659,7 @@ pub async fn flash_backend_restart(app: AppHandle) -> Result<(), String> {
             .lock()
             .map_err(|_| "烧录后端状态锁已损坏".to_string())?;
         *guard = None;
+        drop(guard); // 先释放锁，避免 get_backend 内部再次加锁导致死锁
         let _ = get_backend(&app)?;
         Ok(())
     })
@@ -780,6 +811,18 @@ pub struct FlashProgramOptions {
 #[tauri::command]
 pub async fn flash_program(app: AppHandle, options: FlashProgramOptions) -> Result<Value, String> {
     spawn_blocking_task(move || {
+        // target 非空时优先走 probe-rs 快速通道（Rust 单进程，快）
+        if !options.target.is_empty() {
+            if let Some(mut session) = try_probe_rs_open(&app, &options.target, &options.probe_id) {
+                crate::probe_flash::program(
+                    &mut session,
+                    &options.file_path,
+                    &options.erase_mode,
+                    options.verify,
+                )?;
+                return Ok(json!({ "ok": true, "verified": options.verify }));
+            }
+        }
         let backend = get_backend(&app)?;
         let mut params = json!({
             "probeId": options.probe_id,
@@ -815,6 +858,13 @@ pub async fn flash_erase(
     pack: Option<String>,
 ) -> Result<Value, String> {
     spawn_blocking_task(move || {
+        // target 非空时优先 probe-rs 快速通道
+        if !target.is_empty() {
+            if let Some(mut session) = try_probe_rs_open(&app, &target, &probe_id) {
+                crate::probe_flash::erase(&mut session)?;
+                return Ok(json!({ "ok": true }));
+            }
+        }
         let backend = get_backend(&app)?;
         let mut params = json!({ "probeId": probe_id, "target": target });
         if let Some(pack) = pack {
@@ -833,6 +883,12 @@ pub async fn flash_read_chip_info(
     pack: Option<String>,
 ) -> Result<Value, String> {
     spawn_blocking_task(move || {
+        // target 非空时优先 probe-rs 快速通道
+        if !target.is_empty() {
+            if let Some(mut session) = try_probe_rs_open(&app, &target, &probe_id) {
+                return crate::probe_flash::read_chip_info(&mut session, &target);
+            }
+        }
         let backend = get_backend(&app)?;
         let mut params = json!({ "probeId": probe_id, "target": target });
         if let Some(pack) = pack {

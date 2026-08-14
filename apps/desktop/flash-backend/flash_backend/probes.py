@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import threading
 import time
 from typing import Any
 
@@ -22,6 +23,8 @@ SCAN_TIMEOUT = 10.0
 # 页面初始化 / 多次刷新时避免重复触发；点击“刷新探针”会带 force 强制重扫。
 _CACHE_TTL = 3.0
 _SCAN_CACHE: dict[str, Any] = {"ts": 0.0, "result": None}
+# 保护缓存读写 + 串行化扫描：并发的 USB/HID 枚举会让 macOS IOHIDManager 崩溃
+_SCAN_CACHE_LOCK = threading.Lock()
 
 _SCAN_SCRIPT = r"""
 import json, sys
@@ -56,15 +59,17 @@ def list_probes(params: dict[str, Any] | None = None) -> dict[str, Any]:
     """
     params = params or {}
     force = bool(params.get("force"))
-    now = time.monotonic()
-    cached = _SCAN_CACHE["result"]
-    if not force and cached is not None and now - _SCAN_CACHE["ts"] < _CACHE_TTL:
-        return cached
+    # 锁内做「查缓存 → 扫描 → 写缓存」：既保护缓存 dict 读写，又避免并发扫描
+    with _SCAN_CACHE_LOCK:
+        now = time.monotonic()
+        cached = _SCAN_CACHE["result"]
+        if not force and cached is not None and now - _SCAN_CACHE["ts"] < _CACHE_TTL:
+            return cached
 
-    result = _scan()
-    _SCAN_CACHE["ts"] = now
-    _SCAN_CACHE["result"] = result
-    return result
+        result = _scan()
+        _SCAN_CACHE["ts"] = now
+        _SCAN_CACHE["result"] = result
+        return result
 
 
 def _scan() -> dict[str, Any]:

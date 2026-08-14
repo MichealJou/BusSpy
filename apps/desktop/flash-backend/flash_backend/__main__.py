@@ -29,11 +29,12 @@ from .sn import write as sn_write
 from .targets import list_targets
 # 硬件重操作（烧录/擦除/读芯片）走独立子进程：崩溃隔离 + 无 session 残留
 from .worker import chip_info, erase, program as flash_program
+from .rpc import _write, HARDWARE_LOCK as _HARDWARE_LOCK  # 统一写锁 + 硬件锁（与量产线程共享）
 
 # 需要访问硬件的重操作：串行执行，避免并发访问探针/串口。
 # probe.list 也在其中：并发的 USB/HID 枚举会让 macOS IOHIDManager 崩溃
 # （多个 pyOCD 子进程同时访问同一探针会互踢，进程直接 SIGTRAP）。
-_HARDWARE_LOCK = threading.Lock()
+# 锁本体见 rpc.HARDWARE_LOCK（此处别名 _HARDWARE_LOCK）。
 _HARDWARE_METHODS = {
     "probe.list",
     "flash.program",
@@ -88,15 +89,8 @@ HANDLERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "production.records": production_records,
 }
 
-_write_lock = threading.Lock()
 _active_threads: list[threading.Thread] = []
 _threads_lock = threading.Lock()
-
-
-def _write(payload: dict[str, Any]) -> None:
-    with _write_lock:
-        sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
-        sys.stdout.flush()
 
 
 def _handle(req_id: Any, method: str, params: dict[str, Any]) -> None:
@@ -116,6 +110,18 @@ def _handle(req_id: Any, method: str, params: dict[str, Any]) -> None:
         _write({"id": req_id, "error": str(exc)})
 
 
+def _run_tracked(req_id: Any, method: str, params: dict[str, Any]) -> None:
+    """执行请求并在结束后从活动线程表移除，避免长驻后端线程对象只增不减。"""
+    try:
+        _handle(req_id, method, params)
+    finally:
+        with _threads_lock:
+            try:
+                _active_threads.remove(threading.current_thread())
+            except ValueError:
+                pass
+
+
 def serve() -> None:
     for line in sys.stdin:
         line = line.strip()
@@ -131,7 +137,7 @@ def serve() -> None:
             _write({"id": req_id, "error": "请求解析失败"})
             continue
         thread = threading.Thread(
-            target=_handle,
+            target=_run_tracked,
             args=(req_id, method, params),
             daemon=True,
         )

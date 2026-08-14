@@ -152,8 +152,8 @@ export interface FlasherActions {
   readChipInfo: () => Promise<void>;
   /** 读 SN */
   readSn: () => Promise<void>;
-  /** 写/改 SN */
-  writeSn: (value: string) => Promise<boolean>;
+  /** 写/改 SN；返回 null 表示成功，否则返回错误信息 */
+  writeSn: (value: string) => Promise<string | null>;
   /** 量产控制 */
   productionStart: () => Promise<void>;
   productionStop: () => Promise<void>;

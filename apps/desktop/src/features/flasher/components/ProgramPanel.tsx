@@ -39,12 +39,12 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
 
   const [packDownloaderOpened, setPackDownloaderOpened] = useState(false);
   const [devicePickerOpened, setDevicePickerOpened] = useState(false);
-  // 烧录日志默认收起（不遮挡页面）；烧录中/出错误时自动展开
+  // 烧录日志：默认收起不打扰，只在用户主动点开「查看日志」时展开；
+  // 结果通过下方 run.success 的成功/失败条展示，不刷过程日志。
   const [logsOpen, setLogsOpen] = useState(false);
 
   const running = state.run.running;
-  // 烧录中或刚失败时自动展开日志，方便看过程
-  const showLogsExpanded = logsOpen || running || state.run.success === false;
+  const showLogsExpanded = logsOpen;
   const hasLogs = state.flashLogs.length > 0;
 
   const envReady = Boolean(state.status?.ready);
@@ -317,6 +317,14 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
               {state.chipInfo.flashSize && <span>Flash: {Math.round(state.chipInfo.flashSize / 1024)}KB</span>}
               {state.chipInfo.chipId && <span>设备ID: {state.chipInfo.chipId}</span>}
               {state.chipInfo.uid.some((w) => w !== "00000000") && <span>UID: {state.chipInfo.uid.join(" ")}</span>}
+            </Group>
+          )}
+
+          {/* 序列号（芯片里已写过 SN 时显示） */}
+          {state.currentSn && (
+            <Group gap={8} align="center">
+              <Text fz={12} c="dimmed">SN:</Text>
+              <Text fz={14} fw={700} style={{ fontFamily: "monospace" }}>{state.currentSn}</Text>
             </Group>
           )}
         </Stack>

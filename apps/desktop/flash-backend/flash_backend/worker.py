@@ -19,6 +19,7 @@ import json
 import subprocess
 import sys
 import threading
+from pathlib import Path
 from typing import Any
 
 from .rpc import emit, emit_log
@@ -66,7 +67,7 @@ except Exception as exc:
 
 def _run_worker(method: str, params: dict[str, Any], timeout: float) -> dict[str, Any]:
     """在独立子进程执行硬件操作；事件行转发为主后端事件。成功返回业务结果 dict。"""
-    cwd = __file__.rsplit("/", 2)[0]  # flash-backend/ 目录
+    cwd = str(Path(__file__).resolve().parents[1])  # flash-backend/ 目录（跨平台）
     script = _WORKER_SCRIPT
     env_cwd = cwd
     proc = subprocess.Popen(
