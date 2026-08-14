@@ -8,8 +8,6 @@
 from __future__ import annotations
 
 import struct
-import tempfile
-from pathlib import Path
 from typing import Any
 
 from .rpc import emit_log
@@ -82,7 +80,11 @@ def decode_sn(data: bytes, fmt: str, endian: str = "little", checksum: str = "no
     payload, suffix = data[: len(data) - check_size], data[len(data) - check_size :] if check_size else b""
 
     if fmt == "ascii":
-        value = payload.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip("\x00 \r\n")
+        # 空白 Flash（全 0xFF）特殊处理：显示空，不报乱码
+        if all(b == 0xFF for b in payload):
+            value = ""
+        else:
+            value = payload.split(b"\x00", 1)[0].decode("ascii", errors="replace").strip("\x00 \r\n")
     elif fmt == "bcd":
         value = "".join(f"{byte:02d}" for byte in payload if byte != 0xFF)
     elif fmt == "uint32":
@@ -105,30 +107,22 @@ def decode_sn(data: bytes, fmt: str, endian: str = "little", checksum: str = "no
 
 
 def _connect(probe_id: str, target: str, pack: str | None = None):
-    from pyocd.core.helpers import ConnectHelper
+    """复用 flash 模块的 _session（含探针 ID 归一化匹配 + 回退 + 防卡死）。"""
+    from .flash import _session
 
-    options: dict[str, Any] = {"frequency": 2_000_000}
-    if pack:
-        options["pack"] = pack
-    session = ConnectHelper.session_with_chosen_probe(
-        unique_id=probe_id,
-        target_override=target,
-        options=options,
-    )
-    if session is None:
-        raise RuntimeError(f"无法连接烧录器/芯片：{probe_id}")
-    # pyOCD 0.45：session_with_chosen_probe 不再自动打开 session，必须显式 open
-    if not session.is_open:
-        session.open()
-    return session
+    return _session(probe_id, target, pack=pack)
 
 
 def read(params: dict[str, Any] | None = None) -> dict[str, Any]:
     """读取并解析 SN。"""
     params = params or {}
-    probe_id = params.get("probeId")
+    from .flash import _resolve_probe_id
+
+    probe_id = _resolve_probe_id(params.get("probeId"))
     target = params.get("target")
     pack = params.get("pack")
+    if not target:
+        raise ValueError("缺少 SN 读取参数（target），请先选择器件")
     address = int(params.get("address", 0))
     fmt = params.get("format", "ascii")
     endian = params.get("endian", "little")
@@ -188,8 +182,10 @@ def read(params: dict[str, Any] | None = None) -> dict[str, Any]:
 
 def write(params: dict[str, Any] | None = None) -> dict[str, Any]:
     """写入 / 修改 SN：擦除所在扇区 → 写入编码数据 → 回读校验。"""
+    from .flash import _resolve_probe_id
+
     params = params or {}
-    probe_id = params.get("probeId")
+    probe_id = _resolve_probe_id(params.get("probeId"))
     target = params.get("target")
     pack = params.get("pack")
     address = int(params.get("address", 0))
@@ -199,8 +195,8 @@ def write(params: dict[str, Any] | None = None) -> dict[str, Any]:
     checksum = params.get("checksum", "none")
     length = params.get("length")
 
-    if not probe_id or not target:
-        raise ValueError("缺少 SN 写入参数（probeId/target）")
+    if not target:
+        raise ValueError("缺少 SN 写入参数（target）")
     if not value:
         raise ValueError("SN 值不能为空")
 
@@ -209,18 +205,13 @@ def write(params: dict[str, Any] | None = None) -> dict[str, Any]:
 
     session = _connect(probe_id, target, pack)
     try:
-        # 用临时 BIN 走 FileProgrammer（chip_erase="sector" 只擦数据所在扇区，安全）
-        with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as handle:
-            handle.write(data)
-            temp_path = Path(handle.name)
-        try:
-            from pyocd.flash.file_programmer import FileProgrammer
+        # 直接用 FlashLoader 写入指定地址（擦除 SN 所在扇区 → 编程 → 校验）
+        # 不用 FileProgrammer：它对非固件区地址（如 0x080FF000）可能报参数错误
+        from pyocd.flash.loader import FlashLoader
 
-            programmer = FileProgrammer(session, chip_erase="sector")
-            programmer.add_file(str(temp_path), address=address)
-            programmer.commit()
-        finally:
-            temp_path.unlink(missing_ok=True)
+        loader = FlashLoader(session, chip_erase=False, keep_unwritten=True)
+        loader.add_data(address, data)
+        loader.commit()
 
         # 回读校验
         raw = session.target.read_memory_block8(address, len(data))

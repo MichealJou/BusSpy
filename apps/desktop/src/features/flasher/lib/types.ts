@@ -96,6 +96,7 @@ export interface FlasherState {
   chipInfo: FlashChipInfo | null;
   /** 芯片信息读取中 */
   chipInfoLoading: boolean;
+  snLoading: boolean;
   /** 环境自检/探针/器件库加载状态 */
   loading: boolean;
   /** 首次进入烧录页的初始化状态（含后端进程启动） */

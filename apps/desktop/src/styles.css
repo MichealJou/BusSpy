@@ -1109,8 +1109,12 @@ textarea {
 }
 
 .flash-log-panel {
-  grid-column: 1 / -1;
-  padding: 10px 14px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fafcff;
 }
 
 .path-break {
@@ -1466,15 +1470,16 @@ textarea {
   box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.06);
 }
 
-/* 烧录进度：页面最底部固定栏（与下载器底部进度同风格），烧录时出现。
-   program-simple 为 height:100% 的 flex，margin-top:auto 把进度栏推到视口最底，
-   即使内容不足一屏也贴底；内容超出时跟随内容尾部。 */
+/* 烧录进度：sticky 钉在可视区底部（烧录时出现），不叠加日志 */
 .flash-progress-bar {
-  margin-top: auto;
-  padding: 12px 14px;
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  flex-shrink: 0;
+  padding: 10px 14px;
   border: 1px solid var(--line-soft);
   border-radius: 10px;
-  background: rgba(250, 252, 255, 0.85);
+  background: rgba(250, 252, 255, 0.92);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.08);
@@ -1485,20 +1490,21 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  height: 100%;
   min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 4px;
 }
 
+/* 烧录卡片：高度自适应内容，不强制撑满（避免空白区+日志叠加） */
 .program-simple > .flasher-card {
-  flex: 1;
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 /* 烧录卡片内部分区：浅灰背景 + 圆角，层次分明 */
 .prog-section {
   background: #f4f6fa;
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
 
 /* 分区标题（小字 + 底色，不占太多空间） */
@@ -1508,5 +1514,10 @@ textarea {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+}
+
+/* 分区内控件组：增大行间距，避免拥挤 */
+.prog-section .mantine-Group-root {
+  row-gap: 10px;
 }

@@ -71,6 +71,7 @@ export function useFlasher(): FlasherStore {
   const [flashLogs, setFlashLogs] = useState<string[]>([]);
   const [chipInfo, setChipInfo] = useState<FlasherStore["chipInfo"]>(null);
   const [chipInfoLoading, setChipInfoLoading] = useState(false);
+  const [snLoading, setSnLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [checking, setChecking] = useState(false);
@@ -423,6 +424,7 @@ export function useFlasher(): FlasherStore {
       return;
     }
     setError(null);
+    setSnLoading(true);
     try {
       const result = await flashReadSn({
         probeId: probe.uniqueId || probe.id,
@@ -438,6 +440,8 @@ export function useFlasher(): FlasherStore {
       setSnWarning(result.warning ?? null);
     } catch (err) {
       setError(`读取 SN 失败：${String(err)}`);
+    } finally {
+      setSnLoading(false);
     }
   }, [selectedProbe]);
 
@@ -638,6 +642,7 @@ export function useFlasher(): FlasherStore {
     flashLogs,
     chipInfo,
     chipInfoLoading,
+    snLoading,
     loading,
     initializing,
     checking,

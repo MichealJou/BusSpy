@@ -10,6 +10,7 @@ import {
   Select,
   Stack,
   Text,
+  TextInput,
 } from "@mantine/core";
 import {
   CircleCheck,
@@ -102,22 +103,22 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
 
       {/* ── 烧录卡片（一个白色卡片，内部分区，紧凑有层次） ── */}
       <section className="flasher-card">
-        <Stack gap={16}>
+        <Stack gap={18}>
           {/* 连接 */}
           <div className="prog-section">
           <div className="prog-section-title">{t("sectionConnect")}</div>
-          <Group gap={10} wrap="wrap" align="center">
-            <SegmentedControl
-              size="xs"
-              value={state.connectionMode}
-              onChange={(value) => state.setConnectionMode(value as "swd" | "isp")}
-              data={[{ label: "SWD", value: "swd" }, { label: t("serialIsp"), value: "isp" }]}
-            />
-            {isSwd ? (
-              <>
+          <Stack gap={8}>
+            <Group gap={10} wrap="wrap" align="center">
+              <SegmentedControl
+                size="xs"
+                value={state.connectionMode}
+                onChange={(value) => state.setConnectionMode(value as "swd" | "isp")}
+                data={[{ label: "SWD", value: "swd" }, { label: t("serialIsp"), value: "isp" }]}
+              />
+              {isSwd && (
                 <Select
                   size="xs"
-                  style={{ width: 130, flexShrink: 0 }}
+                  style={{ width: 130 }}
                   value={state.probeType}
                   onChange={(value) => state.setProbeType((value as ProbeType) ?? "auto")}
                   data={[
@@ -128,10 +129,14 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
                   ]}
                   allowDeselect={false}
                 />
+              )}
+            </Group>
+            {isSwd ? (
+              <Group gap={10} wrap="wrap" align="center">
                 {state.visibleProbes.length > 1 ? (
                   <Select
                     size="xs"
-                    style={{ flex: 1, minWidth: 0 }}
+                    style={{ flex: 1, minWidth: 200 }}
                     value={state.selectedProbeId ?? state.visibleProbes[0]?.uniqueId ?? null}
                     onChange={(value) => state.setSelectedProbeId(value ?? null)}
                     placeholder={t("selectProbe")}
@@ -149,12 +154,12 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
                 <Button size="compact-xs" variant="subtle" leftSection={<RefreshCw size={12} />} onClick={() => void state.refreshProbes()} loading={state.refreshing}>
                   {t("refresh")}
                 </Button>
-              </>
+              </Group>
             ) : (
-              <>
+              <Group gap={10} wrap="wrap" align="center">
                 <Select
                   size="xs"
-                  style={{ width: 180 }}
+                  style={{ flex: 1, minWidth: 180 }}
                   data={state.serialPorts.map((port) => ({ value: port, label: port }))}
                   value={state.selectedPort}
                   onChange={(value) => state.setSelectedPort(value ?? null)}
@@ -168,9 +173,9 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
                   onChange={(value) => state.setBaudRate(Number(value ?? 115200))}
                   data={["115200", "460800", "921600", "230400", "57600", "38400", "19200", "9600"].map((r) => ({ value: r, label: r }))}
                 />
-              </>
+              </Group>
             )}
-          </Group>
+          </Stack>
           </div>
 
           {/* 器件 + 固件 */}
@@ -218,59 +223,62 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
           {/* 选项 */}
           <div className="prog-section">
           <div className="prog-section-title">{t("sectionOptions")}</div>
-          <Group gap={16} wrap="wrap" align="flex-end">
-            <Checkbox size="xs" label={t("chipErase")} checked={state.chipErase} onChange={(e) => state.setChipErase(e.currentTarget.checked)} />
-            <Checkbox size="xs" label={t("verifyAfterFlash")} checked={state.verifyAfterFlash} onChange={(e) => state.setVerifyAfterFlash(e.currentTarget.checked)} />
-            <Stack gap={2}>
-              <Text fz={11} c="dimmed">{t("flashAddress")}</Text>
-              <input
-                type="text"
+          <Stack gap={10}>
+            <Group gap={20} wrap="wrap" align="center">
+              <Checkbox size="xs" label={t("chipErase")} checked={state.chipErase} onChange={(e) => state.setChipErase(e.currentTarget.checked)} />
+              <Checkbox size="xs" label={t("verifyAfterFlash")} checked={state.verifyAfterFlash} onChange={(e) => state.setVerifyAfterFlash(e.currentTarget.checked)} />
+            </Group>
+            <Group gap={12} wrap="wrap" align="flex-start" grow>
+              <TextInput
+                size="xs"
+                label={t("flashAddress")}
+                styles={{ label: { fontSize: 11, color: "var(--text-muted)" }, input: { fontFamily: "monospace" } }}
                 value={`0x${(state.flashAddress ?? 0x08000000).toString(16).toUpperCase()}`}
                 onChange={(e) => {
-                  const v = e.target.value;
+                  const v = e.currentTarget.value;
                   const num = v.startsWith("0x") ? parseInt(v, 16) : parseInt(v, 10);
                   if (!isNaN(num)) state.setFlashAddress(num);
                 }}
-                style={{ width: 120, fontSize: 13, fontFamily: "monospace", padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, outline: "none" }}
               />
-            </Stack>
-            <Stack gap={2}>
-              <Text fz={11} c="dimmed">{t("maxClock")}</Text>
-              <select
-                value={state.swdFrequency}
-                onChange={(e) => state.setSwdFrequency(Number(e.target.value))}
-                style={{ width: 90, fontSize: 13, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, outline: "none", cursor: "pointer" }}
-              >
-                <option value={1000000}>1 MHz</option>
-                <option value={2000000}>2 MHz</option>
-                <option value={4000000}>4 MHz</option>
-                <option value={8000000}>8 MHz</option>
-                <option value={10000000}>10 MHz</option>
-              </select>
-            </Stack>
-            <Stack gap={2}>
-              <Text fz={11} c="dimmed">{t("flashAlgorithm")}</Text>
-              {state.algorithms.length > 0 ? (
-                <select
-                  value={state.selectedAlgorithm ?? ""}
-                  onChange={(e) => state.setSelectedAlgorithm(e.target.value || null)}
-                  style={{ width: 210, fontSize: 12, padding: "4px 8px", border: "1px solid var(--line)", borderRadius: 6, outline: "none", cursor: "pointer" }}
-                >
-                  <option value="">
-                    {t("algorithmDefault", { name: state.algorithms.find((a) => a.default)?.name ?? state.algorithms[0]?.name ?? t("probeTypeAuto") })}
-                  </option>
-                  {state.algorithms.map((a) => (
-                    <option key={`${a.name}-${a.address}`} value={a.name}>
-                      {a.name} {a.sizeKb > 0 ? `(${a.sizeKb}KB @ 0x${a.address.toString(16).toUpperCase()})` : ""}
-                      {a.default ? " · 默认" : ""}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Text fz={11} c="dimmed">{t("algorithmNoDfp")}</Text>
-              )}
-            </Stack>
-          </Group>
+              <Select
+                size="xs"
+                label={t("maxClock")}
+                styles={{ label: { fontSize: 11, color: "var(--text-muted)" } }}
+                value={String(state.swdFrequency)}
+                onChange={(value) => state.setSwdFrequency(Number(value ?? 1_000_000))}
+                data={[
+                  { value: "1000000", label: "1 MHz" },
+                  { value: "2000000", label: "2 MHz" },
+                  { value: "4000000", label: "4 MHz" },
+                  { value: "8000000", label: "8 MHz" },
+                  { value: "10000000", label: "10 MHz" },
+                ]}
+                allowDeselect={false}
+              />
+              <Select
+                size="xs"
+                label={t("flashAlgorithm")}
+                styles={{ label: { fontSize: 11, color: "var(--text-muted)" } }}
+                value={state.selectedAlgorithm ?? ""}
+                onChange={(value) => state.setSelectedAlgorithm(value ?? null)}
+                placeholder={state.algorithms.length > 0 ? undefined : t("algorithmNoDfp")}
+                disabled={state.algorithms.length === 0}
+                data={[
+                  {
+                    value: "",
+                    label: t("algorithmDefault", {
+                      name: state.algorithms.find((a) => a.default)?.name ?? state.algorithms[0]?.name ?? t("probeTypeAuto"),
+                    }),
+                  },
+                  ...state.algorithms.map((a) => ({
+                    value: a.name,
+                    label: `${a.name}${a.sizeKb > 0 ? ` (${a.sizeKb}KB)` : ""}${a.default ? " · 默认" : ""}`,
+                  })),
+                ]}
+                allowDeselect={false}
+              />
+            </Group>
+          </Stack>
           </div>
 
           {/* 操作按钮 */}
@@ -278,11 +286,11 @@ export function ProgramPanel({ state }: ProgramPanelProps) {
           <div className="prog-section-title">{t("sectionFlash")}</div>
           <Group gap={10} wrap="wrap">
             <Button
-              leftSection={running ? <Loader size={16} /> : <Play size={16} />}
+              size="sm"
+              leftSection={running ? <Loader size={14} /> : <Play size={14} />}
               onClick={() => void state.flash()}
               disabled={!canFlash || running}
               loading={running}
-              styles={{ root: { minWidth: 140 } }}
             >
               {t("startFlash")}
             </Button>

@@ -27,12 +27,14 @@ export function SnToolPanel({ state }: SnToolPanelProps) {
   const [writing, setWriting] = useState(false);
   const [readError, setReadError] = useState<string | null>(null);
 
-  const canUse = Boolean(state.selectedTarget) && Boolean(state.probes.length > 0);
+  const probe = state.selectedProbe;
+  const canUse = Boolean(state.selectedTarget) && Boolean(probe);
   const needsLength = state.snConfig.format === "ascii" || state.snConfig.format === "bcd";
 
   async function handleRead() {
     setReadError(null);
     await state.readSn();
+    // readSn 内部已 setError，这里直接读 state.error（通过 ref 保证拿到最新值）
     if (state.error) {
       setReadError(state.error);
     }
@@ -63,10 +65,16 @@ export function SnToolPanel({ state }: SnToolPanelProps) {
         </Group>
 
         <Group gap={8} mb={10}>
-          <Button size="xs" leftSection={<RefreshCw size={13} />} onClick={() => void handleRead()} disabled={!canUse}>
+          <Button size="xs" leftSection={<RefreshCw size={13} />} onClick={() => void handleRead()} disabled={!canUse} loading={state.snLoading}>
             {t("readSn")}
           </Button>
         </Group>
+
+        {!canUse && (
+          <Text fz={12} c="dimmed" mb={8}>
+            {t("snNeedDeviceProbe")}
+          </Text>
+        )}
 
         {state.currentSn !== null && (
           <Group gap={8} mb={8}>
@@ -120,13 +128,16 @@ export function SnToolPanel({ state }: SnToolPanelProps) {
           {t("snConfigTitle")}
         </Text>
         <Stack gap={10}>
-          <NumberInput
+          <TextInput
             size="xs"
             label={t("snAddress")}
-            value={state.snConfig.address}
-            onChange={(value) => state.setSnConfig({ address: Number(value ?? 0) })}
-            min={0}
-            step={4096}
+            value={`0x${state.snConfig.address.toString(16).toUpperCase()}`}
+            onChange={(e) => {
+              const v = e.currentTarget.value.trim();
+              const num = v.startsWith("0x") ? parseInt(v, 16) : parseInt(v, 10);
+              if (!isNaN(num) && num >= 0) state.setSnConfig({ address: num });
+            }}
+            styles={{ input: { fontFamily: "monospace" } }}
           />
           <Group grow>
             <Select
