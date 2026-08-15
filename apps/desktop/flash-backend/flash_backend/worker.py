@@ -30,7 +30,7 @@ PROGRAM_TIMEOUT = 600.0
 SHORT_TIMEOUT = 120.0
 
 _WORKER_SCRIPT = r"""
-import json, sys, traceback, logging
+import json, sys, traceback, logging, os
 
 # pyOCD 详细日志（连接/发现/擦除/编程过程）输出到 stderr，全部转发给主进程
 logging.basicConfig(level=logging.INFO, format="[pyocd] %(message)s")
@@ -62,6 +62,12 @@ try:
 except Exception as exc:
     traceback.print_exc(file=sys.stderr)
     out("error", str(exc))
+
+# ⚠️ hidapi 的 hid_exit()（atexit 阶段）在 macOS 上会触发 IOHIDManager PAC
+# 崩溃（EXC_BREAKPOINT）。结果已 flush，跳过 Python 清理直接退出。
+sys.stdout.flush()
+sys.stderr.flush()
+os._exit(0)
 """
 
 

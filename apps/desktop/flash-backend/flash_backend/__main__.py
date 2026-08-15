@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import sys
 import threading
 import traceback
@@ -154,3 +155,10 @@ def serve() -> None:
 
 if __name__ == "__main__":
     serve()
+    # ⚠️ 必须用 os._exit 退出：hidapi 的 hid_exit() 注册在 atexit，
+    # 进程正常退出时会调 IOHIDManagerClose —— 在 macOS 上触发 PAC 崩溃
+    # （EXC_BREAKPOINT，ATK-HS-V3 等探针常见，关闭应用时弹"Python 意外退出"）。
+    # 此时所有响应已即时 flush、活动线程已收尾，跳过 Python 清理直接退出。
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)

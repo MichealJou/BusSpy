@@ -49,6 +49,10 @@ try:
 except Exception as exc:
     sys.stderr.write(str(exc))
 json.dump(probes, sys.stdout)
+sys.stdout.flush()
+# hidapi 的 hid_exit()（atexit）在 macOS 触发 IOHIDManager PAC 崩溃，跳过清理直接退出
+import os
+os._exit(0)
 """
 
 
