@@ -974,6 +974,43 @@ textarea {
   align-items: start;
 }
 
+/* 量产页：单列纵向排列（配置 → 统计 → 记录） */
+.production-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* 烧录器标题（两行：名称 + 副标题/版本） */
+.flasher-title {
+  flex-shrink: 0;
+  max-width: 280px;
+  line-height: 1.25;
+}
+
+/* 底部状态栏的状态圆点：空闲绿色，忙碌蓝色闪烁 */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin: 0 6px 0 2px;
+  vertical-align: middle;
+}
+
+.status-dot.ok {
+  background: #37b24d;
+}
+
+.status-dot.busy {
+  background: #1c7ed6;
+  animation: status-dot-pulse 1s ease-in-out infinite;
+}
+
+@keyframes status-dot-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
 .flasher-card {
   background: #ffffff;
   border: 1px solid var(--line);
