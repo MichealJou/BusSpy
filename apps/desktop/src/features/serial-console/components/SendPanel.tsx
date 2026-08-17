@@ -1,5 +1,5 @@
-import { ActionIcon, Button, Checkbox, Combobox, Group, InputBase, Modal, SegmentedControl, Select, Tabs, Text, TextInput, Tooltip, useCombobox } from "@mantine/core";
-import { FileUp, Pencil, RotateCcw, Send } from "lucide-react";
+import { ActionIcon, Button, Checkbox, Combobox, Drawer, Group, InputBase, Modal, SegmentedControl, Select, Tabs, Text, TextInput, Tooltip, useCombobox } from "@mantine/core";
+import { FileUp, Pencil, RotateCcw, Send, Zap } from "lucide-react";
 import { useRef } from "react";
 import { useState } from "react";
 import { HelpTip } from "../../../components/help/HelpTip";
@@ -18,6 +18,7 @@ export function SendPanel({ state }: SendPanelProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [labelModalOpened, setLabelModalOpened] = useState(false);
   const [labelName, setLabelName] = useState("");
+  const [toolsDrawerOpened, setToolsDrawerOpened] = useState(false);
   const sendMemoryCombobox = useCombobox({
     onDropdownClose: () => sendMemoryCombobox.resetSelectedOption(),
   });
@@ -76,6 +77,11 @@ export function SendPanel({ state }: SendPanelProps) {
               value={state.intervalMs}
               onChange={(value) => state.setIntervalMs(value ?? "1000")}
             />
+            <Tooltip label={t("sendTools")}>
+              <ActionIcon className="send-tools-toggle" variant="light" onClick={() => setToolsDrawerOpened(true)} aria-label={t("sendTools")}>
+                <Zap size={16} />
+              </ActionIcon>
+            </Tooltip>
           </Group>
         </div>
         <div className="send-row">
@@ -226,55 +232,65 @@ export function SendPanel({ state }: SendPanelProps) {
         </Group>
       </Modal>
 
-      <Tabs defaultValue="quick" className="quick-tabs">
-        <Tabs.List>
-          <Tabs.Tab value="quick">{t("quickCommands")}</Tabs.Tab>
-          <Tabs.Tab value="history">{t("sendHistory")}</Tabs.Tab>
-          <Tabs.Tab value="parser">{t("parser")}</Tabs.Tab>
-        </Tabs.List>
-        <Tabs.Panel value="quick">
-          <div className="quick-grid">
-            {quickCommands.map((item) => (
-              <Button
-                key={item}
-                variant="light"
-                color="gray"
-                onClick={() => {
-                  state.setSendText(item);
-                  if (state.isConnected) {
-                    void state.sendCurrentText(item);
-                  }
-                }}
-              >
-                {item}
-              </Button>
-            ))}
-          </div>
-        </Tabs.Panel>
-        <Tabs.Panel value="history">
-          <div className="history-list">
-            {state.history.length > 0 ? (
-              <Button variant="light" color="red" onClick={state.clearSendHistory}>
-                {t("clearMemory")}
-              </Button>
-            ) : null}
-            {state.history.length === 0 ? (
-              <Text size="sm" c="dimmed">
-                {t("emptyHistory")}
-              </Text>
-            ) : (
-              state.history.map((item) => (
-                <Button key={item} variant="subtle" color="gray" onClick={() => state.setSendText(item)}>
+      <Drawer
+        opened={toolsDrawerOpened}
+        onClose={() => setToolsDrawerOpened(false)}
+        position="right"
+        size="min(420px, 90vw)"
+        title={t("sendTools")}
+        className="send-tools-drawer"
+        overlayProps={{ backgroundOpacity: 0.25 }}
+      >
+        <Tabs defaultValue="quick" className="quick-tabs">
+          <Tabs.List>
+            <Tabs.Tab value="quick">{t("quickCommands")}</Tabs.Tab>
+            <Tabs.Tab value="history">{t("sendHistory")}</Tabs.Tab>
+            <Tabs.Tab value="parser">{t("parser")}</Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel value="quick">
+            <div className="quick-grid">
+              {quickCommands.map((item) => (
+                <Button
+                  key={item}
+                  variant="light"
+                  color="gray"
+                  onClick={() => {
+                    state.setSendText(item);
+                    if (state.isConnected) {
+                      void state.sendCurrentText(item);
+                    }
+                  }}
+                >
                   {item}
                 </Button>
-              ))
-            )}
-          </div>
-        </Tabs.Panel>
-        <Tabs.Panel value="parser">
-          <FrameMarkerPanel state={state} />
-        </Tabs.Panel>
-      </Tabs>
+              ))}
+            </div>
+          </Tabs.Panel>
+          <Tabs.Panel value="history">
+            <div className="history-list">
+              {state.history.length > 0 ? (
+                <Button variant="light" color="red" onClick={state.clearSendHistory}>
+                  {t("clearMemory")}
+                </Button>
+              ) : null}
+              {state.history.length === 0 ? (
+                <Text size="sm" c="dimmed">
+                  {t("emptyHistory")}
+                </Text>
+              ) : (
+                state.history.map((item) => (
+                  <Button key={item} variant="subtle" color="gray" onClick={() => state.setSendText(item)}>
+                    {item}
+                  </Button>
+                ))
+              )}
+            </div>
+          </Tabs.Panel>
+          <Tabs.Panel value="parser">
+            <FrameMarkerPanel state={state} />
+          </Tabs.Panel>
+        </Tabs>
+      </Drawer>
     </>
   );
 }

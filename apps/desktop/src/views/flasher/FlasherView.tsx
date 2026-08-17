@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Button, Group, Tabs, Text } from "@mantine/core";
+import { Button } from "@mantine/core";
 import { Download, Info, Save } from "lucide-react";
 import { getVersion } from "@tauri-apps/api/app";
 import { EnvironmentPanel, ProductionPanel, ProgramPanel, SnToolPanel } from "../../features/flasher/components";
 import { useFlasher } from "../../features/flasher/hooks";
 import { useI18n } from "../../i18n";
 import { AboutDialog } from "../../components/update/AboutDialog";
+import { BrandThemePicker } from "../../components/app-shell";
 
 type FlasherTab = "program" | "sn" | "production";
 
@@ -68,37 +69,39 @@ export function FlasherView() {
 
   return (
     <>
-      <header className="toolbar flasher-toolbar">
-        <Group gap={14} wrap="nowrap" align="center" style={{ flex: 1, minWidth: 0 }}>
-          <div className="flasher-title">
-            <Text fz={14} fw={800} lh={1.2}>BusSpy {t("flasherTitle")}</Text>
-            <Text fz={11} c="dimmed" lh={1.2} className="ellipsis">
-              {t("flasherSubtitle")} · v{appVersion}
-            </Text>
-          </div>
-          <Tabs value={tab} onChange={(value) => setTab((value as FlasherTab) ?? "program")}>
-            <Tabs.List>
-              <Tabs.Tab value="program">{t("singleFlash")}</Tabs.Tab>
-              <Tabs.Tab value="sn">{t("snTool")}</Tabs.Tab>
-              <Tabs.Tab value="production">{t("productionMode")}</Tabs.Tab>
-            </Tabs.List>
-          </Tabs>
-        </Group>
-        <Group gap={4} wrap="nowrap" align="center">
-          <Button className="tool-button" variant="subtle" color="gray" size="sm" leftSection={<Save size={15} />} onClick={saveFlashLogs} disabled={flasher.flashLogs.length === 0}>
+      <header className="toolbar toolbar-brand flasher-toolbar">
+        <div className="brand-logo">B</div>
+        <div className="brand-title">
+          <span className="brand-name">BusSpy {t("flasherTitle")}</span>
+          <span className="brand-sub">{t("flasherSubtitle")} · v{appVersion}</span>
+        </div>
+        <div className="toolbar-actions">
+          <Button className="tool-button" variant="subtle" color="gray" leftSection={<Save size={15} />} onClick={saveFlashLogs} disabled={flasher.flashLogs.length === 0}>
             {t("saveLog")}
           </Button>
-          <Button className="tool-button" variant="subtle" color="gray" size="sm" leftSection={<Download size={15} />} onClick={exportProductionCsv} disabled={flasher.productionRecords.length === 0}>
+          <Button className="tool-button" variant="subtle" color="gray" leftSection={<Download size={15} />} onClick={exportProductionCsv} disabled={flasher.productionRecords.length === 0}>
             {t("exportCsv")}
           </Button>
-          <Button className="tool-button compact-tool" variant="subtle" color="gray" size="sm" leftSection={<Info size={15} />} onClick={() => setAboutOpened(true)}>
+          <BrandThemePicker />
+          <Button className="tool-button compact-tool" variant="subtle" color="gray" leftSection={<Info size={15} />} onClick={() => setAboutOpened(true)}>
             {t("about")}
           </Button>
-        </Group>
+        </div>
       </header>
 
       <main className="workspace flasher-workspace">
         <EnvironmentPanel state={flasher} />
+        <div className="flasher-tabbar">
+          <button type="button" className={`flasher-tab${tab === "program" ? " active" : ""}`} onClick={() => setTab("program")}>
+            {t("singleFlash")}
+          </button>
+          <button type="button" className={`flasher-tab${tab === "sn" ? " active" : ""}`} onClick={() => setTab("sn")}>
+            {t("snTool")}
+          </button>
+          <button type="button" className={`flasher-tab${tab === "production" ? " active" : ""}`} onClick={() => setTab("production")}>
+            {t("productionMode")}
+          </button>
+        </div>
         {tab === "program" && <ProgramPanel state={flasher} />}
         {tab === "sn" && <SnToolPanel state={flasher} />}
         {tab === "production" && <ProductionPanel state={flasher} />}

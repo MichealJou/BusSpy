@@ -43,7 +43,7 @@ textarea {
 /* 左侧工具导航栏（串口 / 烧录器 / 设置） */
 .app-sidebar {
   grid-column: 1;
-  grid-row: 1 / 4;
+  grid-row: 2 / 3;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -95,7 +95,7 @@ textarea {
 }
 
 .toolbar {
-  grid-column: 2;
+  grid-column: 1 / -1;
   grid-row: 1;
   height: 52px;
   display: flex;
@@ -138,6 +138,155 @@ textarea {
 .language-select {
   width: 116px;
   margin-left: auto;
+}
+
+/* ── 品牌标题栏（蓝色渐变：logo + 标题 + 玻璃按钮），串口/烧录器共用 ── */
+:root {
+  --brand-a: #578df5;
+  --brand-b: #4783ea;
+}
+
+.toolbar-brand {
+  gap: 14px;
+  background: linear-gradient(90deg, var(--brand-a) 0%, var(--brand-b) 100%);
+  border-bottom: none;
+  color: #ffffff;
+}
+
+.brand-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--brand-a);
+  font-size: 16px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.brand-title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.25;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.brand-title .brand-name {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.brand-title .brand-sub {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+/* 蓝底上的玻璃按钮 */
+.toolbar-brand .tool-button {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+.toolbar-brand .tool-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.toolbar-brand .tool-button:disabled {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.toolbar-brand .language-select {
+  margin-left: 0;
+  width: 108px;
+}
+
+.toolbar-brand .language-select .mantine-Select-input {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+/* 头部颜色色板（调色盘弹层） */
+.brand-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 2px;
+}
+
+.brand-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.brand-swatch:hover {
+  transform: scale(1.12);
+}
+
+.brand-swatch.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.35);
+}
+
+/* ── 烧录器页内标签行（单烧 / SN 工具 / 量产） ── */
+.flasher-tabbar {
+  display: flex;
+  gap: 6px;
+  padding: 5px 6px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.flasher-tab {
+  border: none;
+  background: transparent;
+  padding: 6px 18px;
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.flasher-tab:hover {
+  color: var(--blue);
+  background: #f4f8ff;
+}
+
+.flasher-tab.active {
+  background: #edf5ff;
+  color: var(--blue);
+  font-weight: 600;
 }
 
 .update-inline-card {
@@ -269,6 +418,11 @@ textarea {
   gap: 16px;
 }
 
+/* 面板标题不压缩，工具行负责横向滚动 */
+.panel-header > .mantine-Group-root:first-child {
+  flex-shrink: 0;
+}
+
 .section-title {
   color: #111827;
   font-size: 16px;
@@ -276,9 +430,23 @@ textarea {
   line-height: 1;
 }
 
+/* 工具行固定一行：控件不压缩变形，放不下时整行横向滚动 */
+.receive-actions > *,
+.send-options > * {
+  flex-shrink: 0;
+}
+
 .receive-actions {
-  min-width: 560px;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   justify-content: flex-end;
+  scrollbar-width: thin;
+}
+
+.receive-actions::-webkit-scrollbar {
+  height: 6px;
 }
 
 .receive-actions .mantine-ActionIcon-root {
@@ -397,6 +565,42 @@ textarea {
   color: #8792a2;
 }
 
+/* 接收区浅色主题：白底深字，与整体浅色界面统一（面板标题栏可切换回深色） */
+.terminal.theme-light {
+  color: #354052;
+  background: #ffffff;
+  border-color: var(--line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 6px 16px rgba(15, 23, 42, 0.05);
+}
+
+.terminal.theme-light .terminal-line.rx {
+  color: #0f7a3d;
+}
+
+.terminal.theme-light .terminal-line.tx {
+  color: #1668c9;
+}
+
+.terminal.theme-light .terminal-line.system {
+  color: #9a6b00;
+}
+
+.terminal.theme-light .terminal-line.error {
+  color: #d0342c;
+}
+
+.terminal.theme-light .terminal-time {
+  color: #8a94a6;
+}
+
+.terminal.theme-light .terminal-kind {
+  color: #3c4655;
+}
+
+.terminal.theme-light .terminal-empty {
+  color: #98a2b3;
+}
+
 .send-card,
 .quick-tabs {
   padding: 16px 18px;
@@ -404,6 +608,24 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: 0 8px 20px rgba(31, 43, 61, 0.04);
+}
+
+/* 发送工具抽屉（快捷命令/发送历史/协议解析）：去掉主流程卡片样式，紧凑排在抽屉里 */
+.send-tools-drawer .quick-tabs {
+  padding: 4px 0 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  min-height: 0;
+}
+
+.send-tools-drawer .quick-tabs .mantine-Tabs-panel {
+  min-height: 160px;
+}
+
+.send-tools-drawer .quick-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .send-card {
@@ -441,7 +663,14 @@ textarea {
   flex: 0 0 auto;
   flex-wrap: nowrap;
   justify-content: flex-end;
-  min-width: 500px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.send-options::-webkit-scrollbar {
+  height: 6px;
 }
 
 .send-mode-control {
@@ -857,7 +1086,7 @@ textarea {
 }
 
 .statusbar {
-  grid-column: 2;
+  grid-column: 1 / -1;
   grid-row: 3;
   height: 32px;
   display: flex;
@@ -950,7 +1179,6 @@ textarea {
 /* ── 烧录器模块（flasher） ─────────────────────────────── */
 
 .flasher-toolbar {
-  gap: 0;
   padding: 0 16px;
 }
 
@@ -977,13 +1205,6 @@ textarea {
 /* 量产页：单列纵向排列（配置 → 统计 → 记录） */
 .production-grid {
   grid-template-columns: minmax(0, 1fr);
-}
-
-/* 烧录器标题（两行：名称 + 副标题/版本） */
-.flasher-title {
-  flex-shrink: 0;
-  max-width: 280px;
-  line-height: 1.25;
 }
 
 /* 底部状态栏的状态圆点：空闲绿色，忙碌蓝色闪烁 */
@@ -1058,8 +1279,9 @@ textarea {
   max-height: 160px;
   overflow-y: auto;
   border-radius: 8px;
-  background: var(--terminal);
-  color: #9fdc9f;
+  border: 1px solid var(--line-soft);
+  background: #fbfcfe;
+  color: #2f7d4f;
   font-size: 11px;
   line-height: 1.55;
   white-space: pre-wrap;

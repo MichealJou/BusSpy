@@ -1,5 +1,5 @@
 import { ActionIcon, Group, Switch, Text, TextInput, Tooltip } from "@mantine/core";
-import { Check, Copy, Eraser, Pause, Play } from "lucide-react";
+import { Check, Copy, Eraser, Moon, Pause, Play, Sun } from "lucide-react";
 import { useState } from "react";
 import { HelpTip } from "../../../components/help/HelpTip";
 import { useI18n } from "../../../i18n";
@@ -11,9 +11,24 @@ interface ReceivePanelProps {
   state: SerialConsoleState;
 }
 
+type TerminalTheme = "light" | "dark";
+
+const TERMINAL_THEME_KEY = "busspy.terminalTheme";
+
 export function ReceivePanel({ state }: ReceivePanelProps) {
   const { t } = useI18n();
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [terminalTheme, setTerminalTheme] = useState<TerminalTheme>(() =>
+    localStorage.getItem(TERMINAL_THEME_KEY) === "light" ? "light" : "dark",
+  );
+
+  function toggleTerminalTheme() {
+    setTerminalTheme((current) => {
+      const next = current === "light" ? "dark" : "light";
+      localStorage.setItem(TERMINAL_THEME_KEY, next);
+      return next;
+    });
+  }
 
   async function copySingleLog(log: SerialLog) {
     const content = formatPayload(log, state.receiveHexMode);
@@ -34,6 +49,15 @@ export function ReceivePanel({ state }: ReceivePanelProps) {
           <HelpTip label={t("receiveHelp")} />
         </Group>
         <Group gap="xs" className="receive-actions">
+          <Tooltip label={terminalTheme === "light" ? t("terminalDarkTheme") : t("terminalLightTheme")}>
+            <ActionIcon
+              variant="light"
+              onClick={toggleTerminalTheme}
+              aria-label={terminalTheme === "light" ? t("terminalDarkTheme") : t("terminalLightTheme")}
+            >
+              {terminalTheme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            </ActionIcon>
+          </Tooltip>
           <Tooltip label={state.isPaused ? t("resume") : t("pause")}>
             <ActionIcon variant={state.isPaused ? "filled" : "light"} onClick={() => state.setIsPaused((value) => !value)}>
               {state.isPaused ? <Play size={16} /> : <Pause size={16} />}
@@ -64,7 +88,11 @@ export function ReceivePanel({ state }: ReceivePanelProps) {
         </Group>
       </div>
 
-      <div className="terminal" ref={state.terminalRef} style={{ height: state.terminalHeight }}>
+      <div
+        className={`terminal${terminalTheme === "light" ? " theme-light" : ""}`}
+        ref={state.terminalRef}
+        style={{ height: state.terminalHeight }}
+      >
         {state.logs.length === 0 ? (
           <div className="terminal-empty">{t("waitingData")}</div>
         ) : (

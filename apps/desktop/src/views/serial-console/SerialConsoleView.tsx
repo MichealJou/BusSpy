@@ -23,6 +23,7 @@ export function SerialConsoleView() {
     <>
       <AboutDialog opened={aboutOpened} section={aboutSection} onClose={() => setAboutOpened(false)} />
       <AppToolbar
+        appVersion={appVersion}
         hasLogs={serial.logs.length > 0}
         onDownloadLogs={serial.downloadLogs}
         onExportData={serial.exportData}
